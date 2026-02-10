@@ -61,7 +61,7 @@ public class CameraSensorData extends SensorData {
     
     @Override
     public String getMetricsReport() {
-        // Give a quick summary of the camera data
+        return String.format(
             "Camera Metrics - Resolution: %dx%d, Brightness: %d, Size: %.2fMB",
             imageWidth, imageHeight, brightness, getDataSize() / (1024.0 * 1024.0)
         );

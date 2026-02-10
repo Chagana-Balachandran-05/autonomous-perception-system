@@ -3,9 +3,9 @@ package com.moderndaytech.perception.sensor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
- * This is the base class for all sensor data. It just keeps track of the basics—timestamp, sensor ID, and type.
+ * This is the base class for all sensor data. It just keeps track of the basics timestamp, sensor ID, and type.
  *
- * If you’re making a new kind of sensor, extend this and fill in the details. Keeps things simple and focused.
+ * If youre making a new kind of sensor, extend this and fill in the details. Keeps things simple and focused.
  */
 public abstract class SensorData {
     protected static final Logger logger = LoggerFactory.getLogger(SensorData.class);

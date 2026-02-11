@@ -112,12 +112,13 @@ public class SecurityValidator {
      * Sanitize input by removing potentially dangerous characters
      */
     public static String sanitizeInput(String input) {
-        if (input == null) {
-            return "";
-        }
+        if (input == null) return "";
         
-        // Remove special characters that could be used in attacks
-        return input.replaceAll("[<>'\";\\\\]", "")
-                   .trim();
+        String cleaned = input.replaceAll("<[^>]*>", "");
+        
+        cleaned = cleaned.replaceAll("(?i)script", "");
+        
+        return cleaned;
     }
+
 }

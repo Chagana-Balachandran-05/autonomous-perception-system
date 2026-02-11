@@ -1,6 +1,7 @@
 package com.moderndaytech.perception;
 
 import java.util.List;
+import java.util.ArrayList;
 import com.moderndaytech.perception.detection.DetectedObject;
 import com.moderndaytech.perception.fusion.FusionResult;
 
@@ -14,16 +15,23 @@ public class PerceptionResult {
     private final FusionResult fusionResult;
     private final long processingTimeMs;
     private final boolean success;
+    private final String errorMessage; // Added to handle error details
 
-    // Constructor to initialize all the final fields
+    // Constructor to initialize all the fields
     public PerceptionResult(List<DetectedObject> detectedObjects,
             FusionResult fusionResult,
             long processingTimeMs,
-            boolean success) {
+            boolean success,
+            String errorMessage) {
         this.detectedObjects = detectedObjects;
         this.fusionResult = fusionResult;
         this.processingTimeMs = processingTimeMs;
         this.success = success;
+        this.errorMessage = errorMessage;
+    }
+
+    public static PerceptionResult failure(String message) {
+        return new PerceptionResult(new ArrayList<>(), null, 0, false, message);
     }
 
     public List<DetectedObject> getDetectedObjects() {
@@ -40,5 +48,9 @@ public class PerceptionResult {
 
     public boolean isSuccess() {
         return success;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
     }
 }

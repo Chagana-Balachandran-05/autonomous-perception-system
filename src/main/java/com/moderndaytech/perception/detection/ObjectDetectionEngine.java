@@ -29,7 +29,7 @@ public class ObjectDetectionEngine {
         long startTime = System.currentTimeMillis();
 
         // Simulate object detection based on data volume
-        int numObjects = Math.min(50, fusionResult.getTotalDataPoints() / 100000);
+         int numObjects = Math.min(50, (fusionResult.getTotalDataPoints() / 1000) + 1);
 
         List<DetectedObject> detectedObjects = new ArrayList<>();
 

@@ -80,7 +80,8 @@ public class AutonomousPerceptionSystem {
                     detectedObjects,
                     fusionResult,
                     processingTime,
-                    true);
+                    true,
+                    null);
 
             logger.info("=== Perception Processing Complete ===");
             logger.info("Total time: {}ms", processingTime);
@@ -88,14 +89,14 @@ public class AutonomousPerceptionSystem {
 
             return result;
 
+        } catch (SecurityException e) {
+            // For security risks, re-throw so the automated security test detects the attack
+            logger.error("SECURITY ALERT: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            logger.error("Perception processing failed", e);
-            long processingTime = System.currentTimeMillis() - startTime;
-            return new PerceptionResult(
-                    new ArrayList<>(),
-                    null,
-                    processingTime,
-                    false);
+            // For general errors, return a failure result object
+            logger.error("Simulation error encountered: {}", e.getMessage());
+            return PerceptionResult.failure(e.getMessage()); // This now matches Step 1
         }
     }
 

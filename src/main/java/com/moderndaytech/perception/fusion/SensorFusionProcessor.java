@@ -25,18 +25,19 @@ public class SensorFusionProcessor {
         this.fusionAlgorithms = fusionAlgorithms;
     }
 
-    /**
+/**
      * Fuse the sensor data using whichever algorithm fits best.
-     *
-     * This method just picks the right algorithm and lets it do its thing.
      */
     public FusionResult fuseSensorData(List<SensorData> sensorDataList) {
+        // FIX: We must validate the list exists BEFORE we ask for its .size()
+        if (sensorDataList == null || sensorDataList.isEmpty()) {
+            throw new IllegalArgumentException("Sensor data list cannot be null or empty");
+        }
+
+        // Now that we know it's not null, it's safe to log the size
         logger.info("Starting sensor fusion for {} sensors", sensorDataList.size());
 
         long startTime = System.currentTimeMillis();
-
-        // First, make sure the input is good
-        validateSensorData(sensorDataList);
 
         // Pick the best algorithm for the job
         FusionAlgorithm selectedAlgorithm = selectOptimalFusionAlgorithm(sensorDataList);

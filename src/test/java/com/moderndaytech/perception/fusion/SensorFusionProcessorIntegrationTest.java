@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -300,7 +301,7 @@ public class SensorFusionProcessorIntegrationTest {
 
             assertThat(availableAlgos.stream()
                     .map(FusionAlgorithm::getAlgorithmName)
-                    .toList())
+                    .collect(Collectors.toList())) // Changed .toList() to this
                     .contains("KalmanFilterFusion", "ParticleFilterFusion");
 
             System.out.println("✓ PASS: All algorithms available");

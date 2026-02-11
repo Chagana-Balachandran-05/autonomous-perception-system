@@ -3,6 +3,7 @@ package com.moderndaytech.perception.detection;
 import com.moderndaytech.perception.fusion.FusionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.stream.Collectors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,7 @@ public class ObjectDetectionEngine {
         // Filter by confidence threshold
         List<DetectedObject> filteredObjects = detectedObjects.stream()
                 .filter(obj -> obj.getConfidence() > 0.5)
-                .toList();
+                .collect(Collectors.toList());
 
         long processingTime = System.currentTimeMillis() - startTime;
 

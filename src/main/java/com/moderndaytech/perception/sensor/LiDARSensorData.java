@@ -10,6 +10,7 @@ import java.util.Random;
  *
  * If you need to generate fake LiDAR data for testing, there's a helper method for that.
  */
+
 public class LiDARSensorData extends SensorData {
     private final List<Point3D> pointCloud;
     private final double maxRange;
@@ -58,10 +59,11 @@ public class LiDARSensorData extends SensorData {
     
     @Override
     protected String performSensorSpecificProcessing() {
-        // Here’s where you’d do LiDAR-specific stuff, like filtering out noise or ground points
+        // Logic fix: Define 'filteredPoints' before using it
         logger.debug("Filtering {} LiDAR points", pointCount);
         
-        // Let’s pretend we remove 5% as noise
+        // Simulating processing: Let’s assume 95% of points remain after noise filtering
+        int filteredPoints = (int) (pointCount * 0.95); 
         
         return String.format("Processed %d points (filtered %d noise points)", 
             filteredPoints, pointCount - filteredPoints);

@@ -4,8 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is the base class for all sensor data. It keeps track of the basics: timestamp, sensor ID, and type.
- * If you're making a new kind of sensor, extend this and fill in the details.
+ * This is the base class for all sensor data. It just keeps track of the basics: timestamp, sensor ID, and type.
+ *
+ * If you're making a new kind of sensor, extend this and fill in the details. Keeps things simple and focused.
  */
 public abstract class SensorData {
     protected static final Logger logger = LoggerFactory.getLogger(SensorData.class);
@@ -42,7 +43,8 @@ public abstract class SensorData {
     }
     
     /**
-     * This is a template method: it runs the basic steps for processing sensor data.
+     * This is a template method: it runs the basic steps for processing sensor data, 
+     * but lets subclasses handle the details.
      */
     public final String processData() {
         logger.info("Processing data from sensor: {}", sensorId);

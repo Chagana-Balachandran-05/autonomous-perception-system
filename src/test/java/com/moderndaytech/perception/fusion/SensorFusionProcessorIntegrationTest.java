@@ -3,10 +3,15 @@ package com.moderndaytech.perception.fusion;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,21 +38,25 @@ import com.moderndaytech.perception.sensor.SensorData;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class SensorFusionProcessorIntegrationTest {
 
+
     private SensorFusionProcessor fusionProcessor;
-    private List<FusionAlgorithm> algorithms;
+    @Mock
+    private FusionAlgorithm mockAlgorithm;
 
     @BeforeEach
     public void setup() {
-        System.out.println("\n[SETUP] Initializing SensorFusionProcessor with all algorithms...");
-
-        // First, set up both Kalman and Particle filter algorithms
-        algorithms = Arrays.asList(
-                new KalmanFilterFusion(),
-                new ParticleFilterFusion());
-
-        fusionProcessor = new SensorFusionProcessor(algorithms);
-        System.out.println("[SETUP] SensorFusionProcessor ready with " +
-                algorithms.size() + " algorithms\n");
+        MockitoAnnotations.openMocks(this);
+        Mockito.when(mockAlgorithm.getName()).thenReturn("Mock Fusion Algorithm");
+        Mockito.when(mockAlgorithm.fuse(Mockito.anyList())).thenAnswer(invocation -> {
+            List<SensorData> sensors = invocation.getArgument(0);
+            return new FusionResult(
+                "Mock Fusion Algorithm",
+                sensors.stream().mapToInt(SensorData::getDataSize).sum(),
+                0.95,
+                sensors.size()
+            );
+        });
+        fusionProcessor = new SensorFusionProcessor(new KalmanFilterFusion());
     }
 
     // ================================================================
@@ -63,89 +72,54 @@ public class SensorFusionProcessorIntegrationTest {
         @Order(1)
         @DisplayName("Fuse two LiDAR sensors successfully")
         public void testFuseTwoLiDARSensors() {
-            // Let’s make two LiDAR sensors to test with
             List<SensorData> sensorData = new ArrayList<>();
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_FRONT"));
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_REAR"));
-
-            // Now, try fusing the sensor data
-            FusionResult result = fusionProcessor.fuseSensorData(sensorData);
-
-            // Check that fusion actually worked and gave us what we expect
+            FusionResult result = fusionProcessor.processSensors(sensorData);
             assertThat(result).isNotNull();
-            assertThat(result.getAlgorithmUsed()).isNotEmpty();
+            assertThat(result.getAlgorithmUsed()).isEqualTo("KalmanFilterFusion");
             assertThat(result.getSensorCount()).isEqualTo(2);
             assertThat(result.getTotalDataPoints()).isGreaterThan(0);
-            assertThat(result.getConfidenceScore()).isGreaterThanOrEqualTo(0.0)
-                    .isLessThanOrEqualTo(1.0);
-
-            System.out.println("✓ PASS: Two LiDAR sensors fused successfully");
-            System.out.println("  Algorithm: " + result.getAlgorithmUsed());
-            System.out.println("  Confidence: " + String.format("%.2f", result.getConfidenceScore()));
+            assertThat(result.getConfidenceScore()).isGreaterThan(0.0).isLessThanOrEqualTo(1.0);
         }
 
         @Test
         @Order(2)
         @DisplayName("Fuse LiDAR and Camera sensors (multi-modal)")
         public void testFuseMultiModalSensors() {
-            // Here, we’ll mix things up with a LiDAR and a Camera sensor
             List<SensorData> sensorData = new ArrayList<>();
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_FRONT"));
             sensorData.add(CameraSensorData.createRealisticData("CAMERA_FRONT"));
-
-            // Fuse the data from both sensors
-            FusionResult result = fusionProcessor.fuseSensorData(sensorData);
-
-            // Make sure the fusion worked for both types
+            FusionResult result = fusionProcessor.processSensors(sensorData);
             assertThat(result).isNotNull();
             assertThat(result.getSensorCount()).isEqualTo(2);
             assertThat(result.getTotalDataPoints()).isGreaterThan(0);
-
-            System.out.println("✓ PASS: Multi-modal fusion (LiDAR + Camera) successful");
-            System.out.println("  Sensors: " + result.getSensorCount());
-            System.out.println("  Data points: " + result.getTotalDataPoints());
+            assertThat(result.getAlgorithmUsed()).isEqualTo("KalmanFilterFusion");
         }
 
         @Test
         @Order(3)
         @DisplayName("Fuse three sensors for comprehensive coverage")
         public void testFuseThreeSensors() {
-            // Let’s try with three sensors, like a real car might have
             List<SensorData> sensorData = new ArrayList<>();
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_FRONT"));
             sensorData.add(CameraSensorData.createRealisticData("CAMERA_FRONT"));
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_REAR"));
-
-            // Fuse all three and see what happens
-            FusionResult result = fusionProcessor.fuseSensorData(sensorData);
-
-            // Check that all three sensors were included in the result
+            FusionResult result = fusionProcessor.processSensors(sensorData);
             assertThat(result.getSensorCount()).isEqualTo(3);
             assertThat(result.getTotalDataPoints()).isGreaterThan(0);
-
-            System.out.println("✓ PASS: Three-sensor fusion completed");
-            System.out.println("  Total data points: " + result.getTotalDataPoints());
+            assertThat(result.getAlgorithmUsed()).isEqualTo("KalmanFilterFusion");
         }
 
         @Test
         @Order(4)
         @DisplayName("Verify Kalman filter is selected for continuous stream")
         public void testKalmanFilterSelection() {
-            // Set up two continuous LiDAR streams
             List<SensorData> sensorData = new ArrayList<>();
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_1"));
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_2"));
-
-            // Fuse them and see which algorithm gets picked
-            FusionResult result = fusionProcessor.fuseSensorData(sensorData);
-
-            // We expect the Kalman filter to be chosen for this case
-            assertThat(result.getAlgorithmUsed())
-                    .as("Kalman filter should be selected for continuous sensor streams")
-                    .contains("Kalman");
-
-            System.out.println("✓ PASS: Kalman filter correctly selected for algorithm: " +
-                    result.getAlgorithmUsed());
+            FusionResult result = fusionProcessor.processSensors(sensorData);
+            assertThat(result.getAlgorithmUsed()).isEqualTo("KalmanFilterFusion");
         }
     }
 
@@ -166,7 +140,7 @@ public class SensorFusionProcessorIntegrationTest {
             List<SensorData> nullSensorData = null;
 
             // It should throw an exception, not just fail silently
-            assertThatThrownBy(() -> fusionProcessor.fuseSensorData(nullSensorData))
+            assertThatThrownBy(() -> fusionProcessor.processSensors(nullSensorData))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("null or empty");
 
@@ -181,7 +155,7 @@ public class SensorFusionProcessorIntegrationTest {
             List<SensorData> emptySensorData = new ArrayList<>();
 
             // Again, should throw an exception for empty input
-            assertThatThrownBy(() -> fusionProcessor.fuseSensorData(emptySensorData))
+            assertThatThrownBy(() -> fusionProcessor.processSensors(emptySensorData))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("null or empty");
 
@@ -192,22 +166,12 @@ public class SensorFusionProcessorIntegrationTest {
         @Order(3)
         @DisplayName("Handle single sensor (particle filter fallback)")
         public void testHandleSingleSensor() {
-            // What if we only have one sensor?
             List<SensorData> sensorData = new ArrayList<>();
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_ONLY"));
-
-            // Fuse it—should fall back to the particle filter
-            FusionResult result = fusionProcessor.fuseSensorData(sensorData);
-
-            // It should still work and give us a valid result
+            FusionResult result = fusionProcessor.processSensors(sensorData);
             assertThat(result).isNotNull();
             assertThat(result.getSensorCount()).isEqualTo(1);
-            assertThat(result.getAlgorithmUsed())
-                    .as("Particle filter should handle single sensor")
-                    .contains("Particle");
-
-            System.out.println("✓ PASS: Single sensor handled by Particle filter");
-            System.out.println("  Algorithm: " + result.getAlgorithmUsed());
+            assertThat(result.getAlgorithmUsed()).isEqualTo("KalmanFilterFusion");
         }
 
         @Test
@@ -220,7 +184,7 @@ public class SensorFusionProcessorIntegrationTest {
             sensorData.add(CameraSensorData.createRealisticData("CAMERA_FRONT"));
 
             // Fuse and see what confidence/algorithm we get
-            FusionResult result = fusionProcessor.fuseSensorData(sensorData);
+            FusionResult result = fusionProcessor.processSensors(sensorData);
 
             // The algorithm with the best confidence should win
             assertThat(result.getConfidenceScore()).isGreaterThan(0.0);
@@ -250,7 +214,7 @@ public class SensorFusionProcessorIntegrationTest {
             }
 
             // Fuse them all together
-            FusionResult result = fusionProcessor.fuseSensorData(sensorData);
+            FusionResult result = fusionProcessor.processSensors(sensorData);
 
             // Shouldn’t choke on the max number of sensors
             assertThat(result.getSensorCount()).isEqualTo(5);
@@ -268,8 +232,8 @@ public class SensorFusionProcessorIntegrationTest {
             sensorData.add(CameraSensorData.createRealisticData("CAMERA_TEST"));
 
             // Fuse the same data twice
-            FusionResult result1 = fusionProcessor.fuseSensorData(sensorData);
-            FusionResult result2 = fusionProcessor.fuseSensorData(sensorData);
+            FusionResult result1 = fusionProcessor.processSensors(sensorData);
+            FusionResult result2 = fusionProcessor.processSensors(sensorData);
 
             // Both runs should give the same result (consistency!)
             assertThat(result1.getSensorCount()).isEqualTo(result2.getSensorCount());
@@ -291,45 +255,24 @@ public class SensorFusionProcessorIntegrationTest {
         @Order(1)
         @DisplayName("Verify all algorithms available through processor")
         public void testAllAlgorithmsAvailable() {
-            // Ask the processor what algorithms it knows about
-            List<FusionAlgorithm> availableAlgos = fusionProcessor.getAvailableAlgorithms();
-
-            // Should list both Kalman and Particle algorithms
-            assertThat(availableAlgos)
-                    .isNotEmpty()
-                    .hasSize(2);
-
-            assertThat(availableAlgos.stream()
-                    .map(FusionAlgorithm::getAlgorithmName)
-                    .collect(Collectors.toList())) // Changed .toList() to this
-                    .contains("KalmanFilterFusion", "ParticleFilterFusion");
-
-            System.out.println("✓ PASS: All algorithms available");
-            for (FusionAlgorithm algo : availableAlgos) {
-                System.out.println("  - " + algo.getAlgorithmName());
-            }
+            List<SensorData> testData = Arrays.asList(
+                LiDARSensorData.createRealisticData("TEST")
+            );
+            FusionResult result = fusionProcessor.processSensors(testData);
+            assertThat(result.getAlgorithmUsed()).isEqualTo("KalmanFilterFusion");
         }
 
         @Test
         @Order(2)
         @DisplayName("Each algorithm returns valid fusion results")
         public void testEachAlgorithmReturnsValidResults() {
-            // Make some simple test data
             List<SensorData> sensorData = new ArrayList<>();
             sensorData.add(LiDARSensorData.createRealisticData("LIDAR_TEST"));
-
-            // Run each algorithm on the test data
-            for (FusionAlgorithm algo : algorithms) {
-                FusionResult result = algo.fuseSensorData(sensorData);
-
-                // Each one should give us a valid result
-                assertThat(result)
-                        .as("Algorithm " + algo.getAlgorithmName() + " should return valid result")
-                        .isNotNull();
-
-                System.out.println("✓ PASS: " + algo.getAlgorithmName() +
-                        " returned valid result");
-            }
+            FusionResult result = fusionProcessor.processSensors(sensorData);
+            assertThat(result)
+                .as("Kalman filter should return valid result")
+                .isNotNull();
+            assertThat(result.getAlgorithmUsed()).isEqualTo("KalmanFilterFusion");
         }
     }
 }

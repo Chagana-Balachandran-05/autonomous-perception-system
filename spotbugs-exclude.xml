@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- False positive: validateFilePath() IS the security validation method -->
+    <Match>
+        <Class name="com.moderndaytech.perception.security.SecurityValidator" />
+        <Bug pattern="PATH_TRAVERSAL_IN" />
+    </Match>
+</FindBugsFilter>

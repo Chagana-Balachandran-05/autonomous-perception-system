@@ -23,7 +23,13 @@ public class DetectedObject {
         return objectId;
     }
 
+
     public ObjectClass getObjectClass() {
+        return objectClass;
+    }
+
+    // Alias so tests calling getType() also work
+    public ObjectClass getType() {
         return objectClass;
     }
 

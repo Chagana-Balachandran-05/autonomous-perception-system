@@ -66,7 +66,7 @@ public class AutonomousPerceptionSystem {
             validateSensorData(sensorDataList);
 
             // Step 2: Sensor fusion (Demonstrates Polymorphism)
-            FusionResult fusionResult = fusionProcessor.fuseSensorData(sensorDataList);
+            FusionResult fusionResult = fusionProcessor.processSensors(sensorDataList);
             logger.info("Fusion completed: {}", fusionResult);
 
             // Step 3: Object detection
@@ -109,14 +109,10 @@ public class AutonomousPerceptionSystem {
         }
 
         for (SensorData sensor : sensorDataList) {
-            // Security validation
-            if (!SecurityValidator.validateSensorId(sensor.getSensorId())) {
-                throw new SecurityException("Invalid sensor ID: " + sensor.getSensorId());
-            }
-
-            if (!SecurityValidator.validateDataSize(sensor.getDataSize())) {
-                throw new SecurityException("Invalid data size for sensor: " + sensor.getSensorId());
-            }
+            // Security validation (now throws exceptions)
+            SecurityValidator validator = new SecurityValidator();
+            validator.validateSensorId(sensor.getSensorId());
+            validator.validateDataSize(sensor.getDataSize());
         }
     }
 
@@ -129,17 +125,15 @@ public class AutonomousPerceptionSystem {
         logger.info("║   Advanced Programming Assignment - Tasks 3 & 4       ║");
         logger.info("╚════════════════════════════════════════════════════════╝");
 
-        // Create fusion algorithms (Polymorphism - different implementations)
-        List<FusionAlgorithm> algorithms = Arrays.asList(
-                new KalmanFilterFusion(),
-                new ParticleFilterFusion());
+        // Create fusion algorithm (Polymorphism - choose one implementation)
+        FusionAlgorithm algorithm = new KalmanFilterFusion();
 
         // Initialize system components (Dependency Injection - DIP)
-        SensorFusionProcessor fusionProcessor = new SensorFusionProcessor(algorithms);
+        SensorFusionProcessor fusionProcessor = new SensorFusionProcessor(algorithm);
         ObjectDetectionEngine detectionEngine = new ObjectDetectionEngine();
         AutonomousPerceptionSystem system = new AutonomousPerceptionSystem(
-                fusionProcessor,
-                detectionEngine);
+            fusionProcessor,
+            detectionEngine);
 
         // Create sensor data (Demonstrates Inheritance and Encapsulation)
         logger.info("\n--- Creating Sensor Data ---");

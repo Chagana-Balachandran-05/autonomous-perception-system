@@ -59,6 +59,19 @@ mvn -version
 docker run -d -p 8080:8080 jenkins/jenkins:latest
 ```
 
+### Test Mocking (Mockito)
+
+This project uses **Mockito** for mocking dependencies in unit and integration tests. Ensure your IDE recognizes the following Maven dependency (already included in `pom.xml`):
+
+```xml
+<dependency>
+  <groupId>org.mockito</groupId>
+  <artifactId>mockito-core</artifactId>
+  <version>5.2.0</version>
+  <scope>test</scope>
+</dependency>
+```
+
 ### Building and Running
 
 ```bash
@@ -91,6 +104,22 @@ mvn test -Dtest=ObjectDetectionEngineIntegrationTest
 
 # End-to-end security tests
 mvn test -Dtest=AutonomousPerceptionSecurityTest
+```
+
+### Mocking Example
+
+Tests use Mockito for mocking dependencies, e.g.:
+
+```java
+@Mock
+private FusionAlgorithm mockKalmanFilter;
+
+@BeforeEach
+void setup() {
+  MockitoAnnotations.openMocks(this);
+  Mockito.when(mockKalmanFilter.getAlgorithmName()).thenReturn("KalmanFilterFusion");
+  // ...
+}
 ```
 
 ### Run Security Scanning
@@ -469,18 +498,20 @@ See **[Jenkinsfile](Jenkinsfile)** for:
 
 ---
 
-
 ## ⚙️ Running the Application
 
 ### Command Line
+
 To run the autonomous perception simulation locally:
 
 #### Bash (Linux/macOS/Git Bash):
+
 ```bash
 mvn clean compile exec:java -Dexec.mainClass="com.moderndaytech.perception.AutonomousPerceptionSystem"
 ```
 
 #### PowerShell (Windows):
+
 ```powershell
 mvn clean compile exec:java "-Dexec.mainClass=com.moderndaytech.perception.AutonomousPerceptionSystem"
 ```

@@ -3,92 +3,40 @@ package com.moderndaytech.perception.fusion;
 import com.moderndaytech.perception.sensor.SensorData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Comparator;
 import java.util.List;
 
-/**
- * Handles sensor fusion for the system.
- * Combines data from different sensors using the best available fusion algorithm.
- *
- * You can swap in different algorithms, and this class will use them—no need to change anything else. It's all about keeping things flexible and focused on fusing sensor data.
- */
 public class SensorFusionProcessor {
     private static final Logger logger = LoggerFactory.getLogger(SensorFusionProcessor.class);
+    private static final long SYNC_WINDOW_MS = 50;
 
-    private final List<FusionAlgorithm> fusionAlgorithms;
+    private final FusionAlgorithm algorithm; // depends on ABSTRACTION not implementation
 
-    /**
-     * Make a new fusion processor, giving it a list of algorithms it can use.
-     */
-    public SensorFusionProcessor(List<FusionAlgorithm> fusionAlgorithms) {
-        this.fusionAlgorithms = fusionAlgorithms;
+    // Constructor injection - DIP in action
+    public SensorFusionProcessor(FusionAlgorithm algorithm) {
+        this.algorithm = algorithm;
     }
 
-/**
-     * Fuse the sensor data using whichever algorithm fits best.
-     */
-    public FusionResult fuseSensorData(List<SensorData> sensorDataList) {
-        // FIX: We must validate the list exists BEFORE we ask for its .size()
-        if (sensorDataList == null || sensorDataList.isEmpty()) {
-            throw new IllegalArgumentException("Sensor data list cannot be null or empty");
+    public FusionResult processSensors(List<SensorData> sensors) {
+        if (sensors == null) {
+            throw new IllegalArgumentException("Sensor list cannot be null or empty");
+        }
+        if (sensors.isEmpty()) {
+            throw new IllegalArgumentException("Sensor list cannot be null or empty");
         }
 
-        // Now that we know it's not null, it's safe to log the size
-        logger.info("Starting sensor fusion for {} sensors", sensorDataList.size());
-
-        long startTime = System.currentTimeMillis();
-
-        // Pick the best algorithm for the job
-        FusionAlgorithm selectedAlgorithm = selectOptimalFusionAlgorithm(sensorDataList);
-
-        logger.info("Selected algorithm: {}", selectedAlgorithm.getAlgorithmName());
-
-        // Let the chosen algorithm handle the fusion
-        FusionResult result = selectedAlgorithm.fuseSensorData(sensorDataList);
-
-        long processingTime = System.currentTimeMillis() - startTime;
-
-        logger.info("Sensor fusion completed in {}ms using {}",
-            processingTime, selectedAlgorithm.getAlgorithmName());
-
-        return result;
-    }
-
-    /**
-     * Picks the best algorithm for the current sensor data, based on what’s available and what fits best.
-     */
-    private FusionAlgorithm selectOptimalFusionAlgorithm(List<SensorData> sensorDataList) {
-        // This demonstrates polymorphism - we iterate through different
-        // algorithm implementations and call their methods uniformly
-        return fusionAlgorithms.stream()
-                .filter(algorithm -> algorithm.isApplicable(sensorDataList))
-                .max(Comparator.comparingDouble(algorithm -> algorithm.calculateConfidenceScore(sensorDataList)))
-                .orElseThrow(() -> new IllegalStateException("No suitable fusion algorithm found"));
-    }
-
-    private void validateSensorData(List<SensorData> sensorDataList) {
-        if (sensorDataList == null || sensorDataList.isEmpty()) {
-            throw new IllegalArgumentException("Sensor data list cannot be null or empty");
+        logger.info("Starting fusion with {} sensors using {}",
+            sensors.size(), algorithm.getName());
+        try {
+                FusionResult result = algorithm.fuse(sensors); // polymorphic call
+            logger.info("Fusion completed: confidence={}", result.getConfidence());
+            return result;
+        } catch (Exception e) {
+            logger.error("Fusion failed: {}", e.getMessage(), e);
+            return FusionResult.empty();
         }
-
-        long validSensors = sensorDataList.stream()
-                .filter(SensorData::isValid)
-                .count();
-
-        if (validSensors == 0) {
-            throw new IllegalArgumentException("No valid sensors found in data");
-        }
-
-        logger.debug("Validated {} sensors ({} valid)",
-                sensorDataList.size(), validSensors);
     }
 
-    /**
-     * Get available fusion algorithms
-     * Demonstrates polymorphism - returns list of different implementations
-     */
-    public List<FusionAlgorithm> getAvailableAlgorithms() {
-        return fusionAlgorithms;
+    public String getCurrentAlgorithmName() {
+        return algorithm.getName();
     }
 }

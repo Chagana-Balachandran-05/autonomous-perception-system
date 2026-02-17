@@ -5,28 +5,30 @@ import java.util.List;
 
 /**
  * Interface for sensor fusion algorithms.
- * If you want to add a new way to fuse sensors, just implement this interface.
- * The rest of the system doesn't care which algorithm you use, as long as you stick to this contract.
+ * Defines the contract for combining multiple sensor readings into a unified result.
+ * 
+ * <p>This interface demonstrates the Strategy Pattern and Open-Closed Principle,
+ * allowing new fusion algorithms to be added without modifying existing code.</p>
+ * 
+ * @author Chagana Balachandran
+ * @version 1.0
+ * @see KalmanFilterFusion
+ * @see ParticleFilterFusion
+ * @see WeightedAverageFusion
  */
 public interface FusionAlgorithm {
-
     /**
-     * Should this algorithm handle the current sensor data? Return true if yes.
+     * Fuses multiple sensor data inputs into a single unified result.
+     * 
+     * @param sensorData List of sensor data to be fused
+     * @return FusionResult containing the fused state and confidence
+     * @throws IllegalArgumentException if sensorData is null or empty
      */
-    boolean isApplicable(List<SensorData> sensorDataList);
-
+    FusionResult fuse(List<SensorData> sensorData);
     /**
-     * How confident are we that this algorithm is the right fit for the data? Higher is better.
+     * Returns the name of this fusion algorithm.
+     * 
+     * @return Algorithm name (e.g., "Kalman Filter", "Particle Filter")
      */
-    double calculateConfidenceScore(List<SensorData> sensorDataList);
-
-    /**
-     * Actually do the fusion and return the result.
-     */
-    FusionResult fuseSensorData(List<SensorData> sensorDataList);
-
-    /**
-     * What’s the name of this algorithm? Used for logs and metrics.
-     */
-    String getAlgorithmName();
+    String getName();
 }

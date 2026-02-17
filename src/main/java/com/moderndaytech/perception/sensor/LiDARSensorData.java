@@ -12,15 +12,21 @@ import java.util.Random;
  */
 
 public class LiDARSensorData extends SensorData {
-    private final List<Point3D> pointCloud;
-    private final double maxRange;
-    private final int pointCount;
-    
-    public LiDARSensorData(long timestamp, String sensorId, List<Point3D> pointCloud) {
+    private final float[] x;
+    private final float[] y;
+    private final float[] z;
+    private final float[] intensity;
+
+    public LiDARSensorData(long timestamp, String sensorId, float[] x, float[] y, float[] z, float[] intensity) {
         super(timestamp, sensorId, SensorType.LIDAR);
-        this.pointCloud = pointCloud != null ? pointCloud : new ArrayList<>();
-        this.pointCount = this.pointCloud.size();
-        this.maxRange = calculateMaxRange();
+        if (x == null || y == null || z == null || intensity == null ||
+            x.length != y.length || x.length != z.length || x.length != intensity.length) {
+            throw new IllegalArgumentException("All arrays must be non-null and of equal length");
+        }
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.intensity = intensity;
     }
     
     /**
@@ -29,44 +35,49 @@ public class LiDARSensorData extends SensorData {
      */
     public static LiDARSensorData createRealisticData(String sensorId) {
         long timestamp = System.currentTimeMillis();
-        List<Point3D> points = generateRealisticPointCloud(5000);
-        return new LiDARSensorData(timestamp, sensorId, points);
+        int numPoints = 5000;
+        float[] x = new float[numPoints];
+        float[] y = new float[numPoints];
+        float[] z = new float[numPoints];
+        float[] intensity = new float[numPoints];
+        Random random = new java.security.SecureRandom();
+        for (int i = 0; i < numPoints; i++) {
+            x[i] = (float)((random.nextDouble() - 0.5) * 100);
+            y[i] = (float)((random.nextDouble() - 0.5) * 100);
+            z[i] = (float)(random.nextDouble() * 5);
+            intensity[i] = (float)(random.nextDouble() * 255);
+        }
+        return new LiDARSensorData(timestamp, sensorId, x, y, z, intensity);
     }
     
     @Override
     public boolean isValid() {
-        // Data is valid if there’s a point cloud, not too many points, and a positive range
-        return pointCloud != null && 
-               pointCount > 0 && 
-               pointCount < 2_000_000 && // Don’t go overboard!
-               maxRange > 0;
+        return x != null && x.length > 0 && x.length < 2_000_000;
     }
     
     @Override
     public String getMetricsReport() {
-        // Give a quick summary of the LiDAR data
         return String.format(
             "LiDAR Metrics - Points: %d, Max Range: %.2fm, Avg Intensity: %.2f",
-            pointCount, maxRange, calculateAverageIntensity()
+            getPointCount(), getMaxRange(), calculateAverageIntensity()
         );
     }
     
     @Override
     public int getDataSize() {
-        // Each point is about 16 bytes (x, y, z, intensity)
-        return pointCount * 16;
+        return getPointCount() * 16;
     }
     
     @Override
     protected String performSensorSpecificProcessing() {
         // Logic fix: Define 'filteredPoints' before using it
-        logger.debug("Filtering {} LiDAR points", pointCount);
-        
+        logger.debug("Filtering {} LiDAR points", getPointCount());
+
         // Simulating processing: Let’s assume 95% of points remain after noise filtering
-        int filteredPoints = (int) (pointCount * 0.95); 
-        
-        return String.format("Processed %d points (filtered %d noise points)", 
-            filteredPoints, pointCount - filteredPoints);
+        int filteredPoints = (int) (getPointCount() * 0.95);
+
+        return String.format("Processed %d points (filtered %d noise points)",
+            filteredPoints, getPointCount() - filteredPoints);
     }
     
     /**
@@ -74,71 +85,40 @@ public class LiDARSensorData extends SensorData {
      */
     public List<Point3D> getPointsInRange(double minRange, double maxRange) {
         List<Point3D> filtered = new ArrayList<>();
-        for (Point3D point : pointCloud) {
-            double distance = Math.sqrt(point.x * point.x + point.y * point.y);
+        for (int i = 0; i < x.length; i++) {
+            double distance = Math.sqrt(x[i] * x[i] + y[i] * y[i]);
             if (distance >= minRange && distance <= maxRange) {
-                filtered.add(point);
+                filtered.add(getPoint(i));
             }
         }
         return filtered;
     }
     
     public int getPointCount() {
-        return pointCount;
+        return x.length;
     }
     
     public double getMaxRange() {
-        return maxRange;
+        double max = 0.0;
+        for (int i = 0; i < x.length; i++) {
+            double dist = Math.sqrt(x[i] * x[i] + y[i] * y[i] + z[i] * z[i]);
+            if (dist > max) max = dist;
+        }
+        return max;
     }
     
     // Private helper methods
-    private double calculateMaxRange() {
-        return pointCloud.stream()
-            .mapToDouble(p -> Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z))
-            .max()
-            .orElse(0.0);
-    }
-    
     private double calculateAverageIntensity() {
-        return pointCloud.stream()
-            .mapToDouble(p -> p.intensity)
-            .average()
-            .orElse(0.0);
+        double sum = 0.0;
+        for (float v : intensity) sum += v;
+        return intensity.length == 0 ? 0.0 : sum / intensity.length;
     }
-    
-    private static List<Point3D> generateRealisticPointCloud(int numPoints) {
-        List<Point3D> points = new ArrayList<>();
-        Random random = new Random();
-        
-        for (int i = 0; i < numPoints; i++) {
-            double x = (random.nextDouble() - 0.5) * 100; // -50m to 50m
-            double y = (random.nextDouble() - 0.5) * 100;
-            double z = random.nextDouble() * 5; // 0 to 5m height
-            double intensity = random.nextDouble() * 255;
-            
-            points.add(new Point3D(x, y, z, intensity));
-        }
-        
-        return points;
+
+    public Point3D getPoint(int index) {
+        return new Point3D(x[index], y[index], z[index], intensity[index]);
     }
 }
 
 /**
  * Simple 3D point representation for LiDAR data
  */
-class Point3D {
-    final double x, y, z;
-    final double intensity;
-    
-    public Point3D(double x, double y, double z, double intensity) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.intensity = intensity;
-    }
-    
-    @Override
-    public String toString() {
-        return String.format("Point3D(%.2f, %.2f, %.2f, i=%.1f)", x, y, z, intensity);
-    }
-}

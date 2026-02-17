@@ -2,123 +2,120 @@ package com.moderndaytech.perception.security;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Validates input for security threats in the perception system.
- * Designed with security-first principles (DevSecOps) and keeps its job focused: just security validation.
- * If you want to make sure sensor data is safe, this is the class to use.
+ * Single Responsibility Principle: ONLY handles security validation.
+ * DevSecOps Shift-Left: validation happens before any processing.
  */
 public class SecurityValidator {
     private static final Logger logger = LoggerFactory.getLogger(SecurityValidator.class);
-    
+    private static final int MAX_DATA_SIZE = 100_000_000; // 100MB
+
     /**
-     * Validate sensor ID for security threats
-     * Prevents SQL injection, XSS, and other injection attacks
+     * Validate sensor ID - blocks SQL injection, XSS, path traversal.
+     * Throws SecurityException if malicious input detected.
      */
-    public static boolean validateSensorId(String sensorId) {
+    public void validateSensorId(String sensorId) {
         if (sensorId == null || sensorId.trim().isEmpty()) {
-            logger.warn("Security: Empty sensor ID detected");
-            return false;
+            logger.warn("Security: Empty sensor ID rejected");
+            throw new IllegalArgumentException("Sensor ID cannot be null or empty");
         }
-        
-        // Check for SQL injection patterns
         if (containsSqlInjectionPattern(sensorId)) {
-            logger.error("Security: SQL injection attempt detected in sensor ID: {}", sensorId);
-            return false;
+            logger.error("Security: SQL injection attempt: {}", sensorId);
+            throw new SecurityException("Invalid sensor ID pattern detected - SQL injection attempt");
         }
-        
-        // Check for XSS patterns
         if (containsXssPattern(sensorId)) {
-            logger.error("Security: XSS attempt detected in sensor ID: {}", sensorId);
-            return false;
+            logger.error("Security: XSS attempt: {}", sensorId);
+            throw new SecurityException("Invalid sensor ID pattern detected - XSS attempt");
         }
-        
-        // Check for path traversal
         if (containsPathTraversal(sensorId)) {
-            logger.error("Security: Path traversal attempt detected in sensor ID: {}", sensorId);
-            return false;
+            logger.error("Security: Path traversal in sensor ID: {}", sensorId);
+            throw new SecurityException("Path traversal detected");
         }
-        
-        return true;
+        logger.debug("Security: Sensor ID validated OK: {}", sensorId);
     }
-    
+
     /**
-     * Validate data size to prevent memory exhaustion attacks
+     * Validate file path - blocks directory traversal attacks.
+     * Throws SecurityException if traversal detected.
      */
-    public static boolean validateDataSize(int dataSize) {
-        final int MAX_DATA_SIZE = 100_000_000; // 100MB limit
-        
+    public void validateFilePath(String filePath) {
+        if (filePath == null || filePath.trim().isEmpty()) {
+            throw new IllegalArgumentException("File path cannot be null or empty");
+        }
+        Path path = Paths.get(filePath).normalize();
+        if (path.toString().contains("..")) {
+            logger.error("Security: Path traversal detected: {}", filePath);
+            throw new SecurityException("Path traversal detected");
+        }
+        if (filePath.contains("../") || filePath.contains("..\\")
+                || filePath.contains("%2e%2e") || filePath.contains("%252e")) {
+            logger.error("Security: Path traversal pattern: {}", filePath);
+            throw new SecurityException("Path traversal detected");
+        }
+        if (filePath.startsWith("/etc/") || filePath.toLowerCase().contains("system32")) {
+            logger.error("Security: Sensitive path blocked: {}", filePath);
+            throw new SecurityException("Path traversal detected");
+        }
+        logger.debug("Security: File path validated OK: {}", filePath);
+    }
+
+    /**
+     * Validate data size - blocks memory exhaustion attacks.
+     * Throws SecurityException if size exceeds 100MB limit.
+     */
+    public void validateDataSize(int dataSize) {
         if (dataSize < 0) {
-            logger.warn("Security: Negative data size detected");
-            return false;
+            throw new IllegalArgumentException("Data size cannot be negative");
         }
-        
         if (dataSize > MAX_DATA_SIZE) {
-            logger.error("Security: Data size exceeds limit: {} bytes (max: {})", 
-                dataSize, MAX_DATA_SIZE);
-            return false;
+            logger.error("Security: Data size exceeds limit: {} bytes", dataSize);
+            throw new SecurityException("Data size exceeds limit: " + dataSize);
         }
-        
-        return true;
+        logger.debug("Security: Data size validated OK: {} bytes", dataSize);
     }
-    
+
     /**
-     * Detect SQL injection patterns
-     */
-    private static boolean containsSqlInjectionPattern(String input) {
-        String lowerInput = input.toLowerCase();
-        String[] sqlKeywords = {
-            "drop table", "delete from", "insert into", "update ", 
-            "union select", "exec(", "execute(", "--", ";--", "/*", "*/"
-        };
-        
-        for (String keyword : sqlKeywords) {
-            if (lowerInput.contains(keyword)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Detect XSS patterns
-     */
-    private static boolean containsXssPattern(String input) {
-        String lowerInput = input.toLowerCase();
-        String[] xssPatterns = {
-            "<script", "javascript:", "onerror=", "onload=", 
-            "<iframe", "<object", "<embed"
-        };
-        
-        for (String pattern : xssPatterns) {
-            if (lowerInput.contains(pattern)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Detect path traversal attempts
-     */
-    private static boolean containsPathTraversal(String input) {
-        return input.contains("../") || input.contains("..\\") || 
-               input.contains("%2e%2e") || input.contains("%252e");
-    }
-    
-    /**
-     * Sanitize input by removing potentially dangerous characters
+     * Sanitize input by stripping HTML/script tags.
      */
     public static String sanitizeInput(String input) {
         if (input == null) return "";
-        
         String cleaned = input.replaceAll("<[^>]*>", "");
-        
         cleaned = cleaned.replaceAll("(?i)script", "");
-        
         return cleaned;
     }
 
+    // ── private helpers ──────────────────────────────────────────────────────
+
+    private boolean containsSqlInjectionPattern(String input) {
+        String lower = input.toLowerCase();
+        String[] keywords = {
+            "drop table", "delete from", "insert into", "union select",
+            "exec(", "execute(", "--", ";--", "/*", "*/", "' or ", "1=1"
+        };
+        for (String kw : keywords) {
+            if (lower.contains(kw)) return true;
+        }
+        return false;
+    }
+
+    private boolean containsXssPattern(String input) {
+        String lower = input.toLowerCase();
+        String[] patterns = {
+            "<script", "javascript:", "onerror=", "onload=",
+            "<iframe", "<object", "<embed", "<svg", "alert("
+        };
+        for (String p : patterns) {
+            if (lower.contains(p)) return true;
+        }
+        return false;
+    }
+
+    private boolean containsPathTraversal(String input) {
+        return input.contains("../") || input.contains("..\\")
+            || input.contains("%2e%2e") || input.contains("%252e");
+    }
 }

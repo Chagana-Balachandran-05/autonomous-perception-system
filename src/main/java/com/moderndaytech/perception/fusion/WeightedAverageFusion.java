@@ -3,7 +3,7 @@ package com.moderndaytech.perception.fusion;
 import com.moderndaytech.perception.sensor.SensorData;
 import java.util.List;
 
-public class KalmanFilterFusion implements FusionAlgorithm {
+public class WeightedAverageFusion implements FusionAlgorithm {
 
     @Override
     public FusionResult fuse(List<SensorData> sensorData) {
@@ -11,7 +11,6 @@ public class KalmanFilterFusion implements FusionAlgorithm {
             throw new IllegalArgumentException("Sensor data cannot be null or empty");
         }
 
-        // Kalman filter implementation
         int totalDataPoints = sensorData.stream()
             .mapToInt(SensorData::getDataSize)
             .sum();
@@ -30,6 +29,6 @@ public class KalmanFilterFusion implements FusionAlgorithm {
 
     @Override
     public String getName() {
-        return "KalmanFilterFusion";
+        return "Weighted Average Fusion";
     }
 }

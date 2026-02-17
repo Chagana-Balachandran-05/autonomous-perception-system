@@ -42,8 +42,9 @@ public class CameraSensorData extends SensorData {
         byte[] fakeImage = new byte[width * height * 3]; // RGB
         
         // Simulate image data
+        java.security.SecureRandom secureRandom = new java.security.SecureRandom();
         for (int i = 0; i < fakeImage.length; i++) {
-            fakeImage[i] = (byte) (Math.random() * 128 + 64); // Mid-range values
+            fakeImage[i] = (byte) (secureRandom.nextDouble() * 128 + 64); // Mid-range values
         }
         
         return new CameraSensorData(timestamp, sensorId, width, height, fakeImage);

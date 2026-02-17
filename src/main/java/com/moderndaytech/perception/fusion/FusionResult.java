@@ -10,14 +10,22 @@ public class FusionResult {
     private final int totalDataPoints;
     private final double confidenceScore;
     private final int sensorCount;
+    private final Object estimatedState;
 
     public FusionResult(String algorithmUsed, int totalDataPoints,
             double confidenceScore, int sensorCount) {
+        this(algorithmUsed, totalDataPoints, confidenceScore, sensorCount, null);
+    }
+
+    public FusionResult(String algorithmUsed, int totalDataPoints,
+            double confidenceScore, int sensorCount, Object estimatedState) {
         this.algorithmUsed = algorithmUsed;
         this.totalDataPoints = totalDataPoints;
         this.confidenceScore = confidenceScore;
         this.sensorCount = sensorCount;
+        this.estimatedState = estimatedState;
     }
+
 
     public String getAlgorithmUsed() {
         return algorithmUsed;
@@ -31,8 +39,37 @@ public class FusionResult {
         return confidenceScore;
     }
 
+    // Alias for document compatibility
+    public double getConfidence() {
+        return confidenceScore;
+    }
+
     public int getSensorCount() {
         return sensorCount;
+    }
+
+    // Alias for document compatibility
+    public int getFusedSensorCount() {
+        return sensorCount;
+    }
+
+    public Object getEstimatedState() {
+        return estimatedState;
+    }
+
+
+    public boolean isValid() {
+        return sensorCount > 0 && confidenceScore >= 0.0;
+    }
+
+    public static FusionResult empty() {
+        return new FusionResult("None", 0, 0.0, 0);
+    }
+
+
+    // Used in integration tests  
+    public long getTimestamp() {
+        return System.currentTimeMillis();
     }
 
     @Override

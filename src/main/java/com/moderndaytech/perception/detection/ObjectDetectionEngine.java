@@ -1,10 +1,10 @@
 package com.moderndaytech.perception.detection;
 
 import com.moderndaytech.perception.fusion.FusionResult;
+import com.moderndaytech.perception.sensor.SensorData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.stream.Collectors;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,8 +16,31 @@ import java.util.Random;
  */
 public class ObjectDetectionEngine {
     private static final Logger logger = LoggerFactory.getLogger(ObjectDetectionEngine.class);
+    private final Random random = new java.security.SecureRandom();
 
-    private final Random random = new Random();
+    /**
+     * Overload: detect objects from raw sensor data directly.
+     * Used in integration tests.
+     */
+    public List<DetectedObject> detectObjects(SensorData sensorData) {
+        logger.info("Detecting from raw sensor: {}", sensorData.getSensorId());
+        List<DetectedObject> objects = new ArrayList<>();
+        int numObjects = Math.min(10, sensorData.getDataSize() / 100000 + 1);
+        for (int i = 0; i < numObjects; i++) {
+            objects.add(generateDetectedObject(i));
+        }
+        return filterByConfidence(objects);
+    }
+
+    public List<DetectedObject> filterByConfidence(List<DetectedObject> objects) {
+        return objects.stream()
+            .filter(obj -> obj.getConfidence() > 0.5)
+            .toList();
+    }
+
+    public double calculateConfidence(DetectedObject obj) {
+        return obj.getConfidence();
+    }
 
     /**
      * Detect objects in fused sensor data

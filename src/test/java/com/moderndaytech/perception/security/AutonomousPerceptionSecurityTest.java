@@ -1,6 +1,10 @@
+
 package com.moderndaytech.perception.security;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.util.ArrayList;
@@ -41,6 +45,55 @@ import com.moderndaytech.perception.sensor.SensorData;
 @DisplayName("Autonomous Perception System - Security Tests")
 public class AutonomousPerceptionSecurityTest {
 
+        // ===============================================
+        // Parameterized Security Tests (per assignment doc)
+        // ===============================================
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "sensor'; DROP TABLE users--",
+                "sensor' OR '1'='1",
+                "sensor'; DELETE FROM sensors WHERE '1'='1'--",
+                "sensor' UNION SELECT * FROM passwords--",
+                "sensor'; EXEC sp_MSForEachTable 'DROP TABLE ?'--"
+        })
+        void testSQLInjectionPrevention_WithVariousPatterns_AllBlocked(String maliciousInput) {
+                SecurityValidator validator = new SecurityValidator();
+                assertThatThrownBy(() -> validator.validateSensorId(maliciousInput))
+                        .isInstanceOf(SecurityException.class)
+                        .hasMessageContaining("Invalid sensor ID pattern");
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "<script>alert('XSS')</script>",
+                "<img src=x onerror=alert('XSS')>",
+                "javascript:alert('XSS')",
+                "<iframe src='javascript:alert(\"XSS\")'></iframe>",
+                "<svg/onload=alert('XSS')>"
+        })
+        void testXSSPrevention_WithVariousPayloads_AllBlocked(String xssPayload) {
+                SecurityValidator validator = new SecurityValidator();
+                assertThatThrownBy(() -> validator.validateSensorId(xssPayload))
+                        .isInstanceOf(SecurityException.class)
+                        .hasMessageContaining("XSS");
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "../../etc/passwd",
+                "../../../windows/system32/config",
+                "..\\..\\..\\windows\\system32",
+                "/etc/passwd",
+                "C:\\Windows\\System32\\config\\SAM"
+        })
+        void testPathTraversalPrevention_WithVariousAttempts_AllBlocked(String maliciousPath) {
+                SecurityValidator validator = new SecurityValidator();
+                assertThatThrownBy(() -> validator.validateFilePath(maliciousPath))
+                        .isInstanceOf(SecurityException.class)
+                        .hasMessageContaining("Path traversal");
+        }
+
     private AutonomousPerceptionSystem perceptionSystem;
 
     @BeforeEach
@@ -48,13 +101,9 @@ public class AutonomousPerceptionSecurityTest {
         System.out.println("\n[SETUP] Initializing test environment...");
 
         // Initialize system with all components
-        List<FusionAlgorithm> algorithms = Arrays.asList(
-                new KalmanFilterFusion(),
-                new ParticleFilterFusion());
-
-        SensorFusionProcessor fusionProcessor = new SensorFusionProcessor(algorithms);
+        FusionAlgorithm algorithm = new KalmanFilterFusion();
+        SensorFusionProcessor fusionProcessor = new SensorFusionProcessor(algorithm);
         ObjectDetectionEngine detectionEngine = new ObjectDetectionEngine();
-
         perceptionSystem = new AutonomousPerceptionSystem(
                 fusionProcessor,
                 detectionEngine);
@@ -112,38 +161,31 @@ public class AutonomousPerceptionSecurityTest {
 
         System.out.println("[SAST] Testing SQL injection protection...");
 
+        SecurityValidator validator = new SecurityValidator();
+
         // Test SQL injection attempt
         String maliciousSensorId = "'; DROP TABLE sensors; --";
-        boolean isValidSql = SecurityValidator.validateSensorId(maliciousSensorId);
-
-        assertThat(isValidSql)
-                .as("SQL injection should be blocked")
-                .isFalse();
-
+        assertThatThrownBy(() -> validator.validateSensorId(maliciousSensorId))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("pattern");
         System.out.println("✓ SQL injection blocked: " + maliciousSensorId);
 
         System.out.println("[SAST] Testing XSS protection...");
 
         // Test XSS attempt
         String xssSensorId = "<script>alert('XSS')</script>";
-        boolean isValidXss = SecurityValidator.validateSensorId(xssSensorId);
-
-        assertThat(isValidXss)
-                .as("XSS attempt should be blocked")
-                .isFalse();
-
+        assertThatThrownBy(() -> validator.validateSensorId(xssSensorId))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("XSS");
         System.out.println("✓ XSS blocked: " + xssSensorId);
 
         System.out.println("[SAST] Testing path traversal protection...");
 
         // Test path traversal
         String pathTraversalId = "../../../etc/passwd";
-        boolean isValidPath = SecurityValidator.validateSensorId(pathTraversalId);
-
-        assertThat(isValidPath)
-                .as("Path traversal should be blocked")
-                .isFalse();
-
+        assertThatThrownBy(() -> validator.validateSensorId(pathTraversalId))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Path traversal");
         System.out.println("✓ Path traversal blocked: " + pathTraversalId);
 
         System.out.println("✓ PASSED: All input validation security tests passed\n");
@@ -159,24 +201,18 @@ public class AutonomousPerceptionSecurityTest {
 
         System.out.println("[SAST] Testing oversized data protection...");
 
+        SecurityValidator validator = new SecurityValidator();
+
         // Test with data size that's too large
-        int oversizedDataSize = 150_000_000; // 150MB (exceeds 100MB limit)
-        boolean isValidSize = SecurityValidator.validateDataSize(oversizedDataSize);
-
-        assertThat(isValidSize)
-                .as("Oversized data should be rejected")
-                .isFalse();
-
+        int oversizedDataSize = 150_000_000; // 150MB (exceeds 10MB limit)
+        assertThatThrownBy(() -> validator.validateDataSize(oversizedDataSize))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("exceeds");
         System.out.println("✓ Oversized data blocked: " + oversizedDataSize + " bytes");
 
         // Test with valid data size
-        int validDataSize = 50_000_000; // 50MB
-        boolean isValidSmallSize = SecurityValidator.validateDataSize(validDataSize);
-
-        assertThat(isValidSmallSize)
-                .as("Valid data size should be accepted")
-                .isTrue();
-
+        int validDataSize = 5_000_000; // 5MB
+        validator.validateDataSize(validDataSize); // Should not throw
         System.out.println("✓ Valid data size accepted: " + validDataSize + " bytes");
 
         System.out.println("✓ PASSED: Memory exhaustion protection working\n");
@@ -199,22 +235,26 @@ public class AutonomousPerceptionSecurityTest {
         // Create malicious sensor data
         List<SensorData> maliciousData = new ArrayList<>();
 
-        try {
-            // This should throw SecurityException
-            LiDARSensorData maliciousLidar = new LiDARSensorData(
-                    System.currentTimeMillis(),
-                    "'; DROP TABLE sensors; --", // SQL injection attempt
-                    new ArrayList<>());
-            maliciousData.add(maliciousLidar);
+                try {
+                        // This should throw SecurityException
+                        float[] x = new float[0];
+                        float[] y = new float[0];
+                        float[] z = new float[0];
+                        float[] intensity = new float[0];
+                        LiDARSensorData maliciousLidar = new LiDARSensorData(
+                                        System.currentTimeMillis(),
+                                        "'; DROP TABLE sensors; --", // SQL injection attempt
+                                        x, y, z, intensity);
+                        maliciousData.add(maliciousLidar);
 
-            // Attempt to process - should fail
-            perceptionSystem.processPerceptionFrame(maliciousData);
+                        // Attempt to process - should fail
+                        perceptionSystem.processPerceptionFrame(maliciousData);
 
-            fail("System should have rejected malicious sensor data");
+                        fail("System should have rejected malicious sensor data");
 
-        } catch (SecurityException e) {
-            System.out.println("✓ Malicious sensor data rejected: " + e.getMessage());
-        }
+                } catch (SecurityException e) {
+                        System.out.println("✓ Malicious sensor data rejected: " + e.getMessage());
+                }
 
         System.out.println("✓ PASSED: Runtime security validation working\n");
     }

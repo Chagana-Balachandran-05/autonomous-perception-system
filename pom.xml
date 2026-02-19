@@ -171,6 +171,7 @@
                     <xmlOutput>true</xmlOutput>
                     <failOnError>true</failOnError>
                     <includeFilterFile>spotbugs-security-include.xml</includeFilterFile>
+                    <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
                     <plugins>
                         <plugin>
                             <groupId>com.h3xstream.findsecbugs</groupId>

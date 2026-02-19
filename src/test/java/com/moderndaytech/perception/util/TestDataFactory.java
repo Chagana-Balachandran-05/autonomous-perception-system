@@ -1,4 +1,4 @@
-package com.moderndaytech.perception.test;
+package com.moderndaytech.perception.util;
 
 import com.moderndaytech.perception.sensor.SensorData;
 import com.moderndaytech.perception.sensor.LiDARSensorData;

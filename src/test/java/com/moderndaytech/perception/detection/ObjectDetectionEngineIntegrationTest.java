@@ -2,6 +2,8 @@ package com.moderndaytech.perception.detection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -12,12 +14,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.MethodOrderer;
 
-import com.moderndaytech.perception.fusion.FusionResult;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.moderndaytech.perception.sensor.LiDARSensorData;
 
 /**
  * Integration Tests for ObjectDetectionEngine
  * 
- * PURPOSE: Validates object detection correctness on fused sensor data
+ * PURPOSE: Validates object detection correctness on LiDAR sensor data
  * Tests detection accuracy, filtering, and failure scenarios
  * 
  * PRINCIPLE: Single Responsibility Principle (SRP) - Detection focused only
@@ -44,6 +48,44 @@ public class ObjectDetectionEngineIntegrationTest {
         System.out.println("[SETUP] ObjectDetectionEngine ready\n");
     }
 
+        private LiDARSensorData createLiDAR(int points) {
+                float[] x = new float[points];
+                float[] y = new float[points];
+                float[] z = new float[points];
+                float[] intensity = new float[points];
+                for (int i = 0; i < points; i++) {
+                        x[i] = i;
+                        y[i] = i * 0.5f;
+                        z[i] = 0.1f;
+                        intensity[i] = 0.8f;
+                }
+                return new LiDARSensorData(System.currentTimeMillis(), "TEST-LIDAR", x, y, z, intensity);
+        }
+
+        private LiDARSensorData createLiDARFromSceneResource(String resourcePath) throws Exception {
+                try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
+                        assertThat(inputStream)
+                                .as("Scene resource should exist: " + resourcePath)
+                                .isNotNull();
+
+                        String sceneJson = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+                        JsonObject scene = JsonParser.parseString(sceneJson).getAsJsonObject();
+                        int points = scene.get("lidar_points").getAsInt();
+
+                        float[] x = new float[points];
+                        float[] y = new float[points];
+                        float[] z = new float[points];
+                        float[] intensity = new float[points];
+                        for (int i = 0; i < points; i++) {
+                                x[i] = i;
+                                y[i] = i * 0.5f;
+                                z[i] = 0.1f;
+                                intensity[i] = 0.8f;
+                        }
+                        return new LiDARSensorData(System.currentTimeMillis(), "TEST-SCENE-LIDAR", x, y, z, intensity);
+                }
+        }
+
     // ================================================================
     // POSITIVE TESTS: Successful Object Detection
     // ================================================================
@@ -57,16 +99,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(1)
         @DisplayName("Detect objects from high-quality fusion data")
         public void testDetectObjectsHighQuality() {
-            // ARRANGE: Create high-quality fusion result (5000 data points)
-            FusionResult fusionData = new FusionResult(
-                    "KalmanFilterFusion",
-                    5000, // Total data points
-                    0.95, // High confidence score
-                    2 // From 2 sensors
-            );
+                        LiDARSensorData lidar = createLiDAR(5000);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(fusionData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: Should detect reasonable number of objects
             assertThat(detectedObjects)
@@ -77,7 +113,7 @@ public class ObjectDetectionEngineIntegrationTest {
             // Verify all detected objects have required properties
             assertThat(detectedObjects).allSatisfy(obj -> {
                 assertThat(obj.getObjectId()).isNotEmpty();
-                assertThat(obj.getObjectClass()).isNotNull();
+                                assertThat(obj.getType()).isNotNull();
                 assertThat(obj.getPosition()).isNotNull();
                 assertThat(obj.getConfidence()).isGreaterThanOrEqualTo(0.0)
                         .isLessThanOrEqualTo(1.0);
@@ -91,15 +127,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(2)
         @DisplayName("All detected objects pass confidence threshold (>50%)")
         public void testConfidenceThresholdFiltering() {
-            // ARRANGE: Create fusion data with moderate confidence
-            FusionResult fusionData = new FusionResult(
-                    "ParticleFilterFusion",
-                    3000,
-                    0.7, // 70% confidence
-                    1);
+                        LiDARSensorData lidar = createLiDAR(3000);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(fusionData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: All objects must have confidence > 50% (0.5)
             assertThat(detectedObjects)
@@ -115,19 +146,14 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(3)
         @DisplayName("Detect diverse object classes (vehicles, pedestrians, etc)")
         public void testDetectDiverseObjectClasses() {
-            // ARRANGE: Create fusion data
-            FusionResult fusionData = new FusionResult(
-                    "KalmanFilterFusion",
-                    10000,
-                    0.85,
-                    3);
+                        LiDARSensorData lidar = createLiDAR(10000);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(fusionData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: Should detect multiple object types
             long uniqueClasses = detectedObjects.stream()
-                    .map(DetectedObject::getObjectClass)
+                    .map(DetectedObject::getType)
                     .distinct()
                     .count();
 
@@ -137,9 +163,9 @@ public class ObjectDetectionEngineIntegrationTest {
 
             System.out.println("✓ PASS: Detected " + uniqueClasses +
                     " different object classes");
-            for (ObjectClass objClass : ObjectClass.values()) {
+                        for (ObjectType objClass : ObjectType.values()) {
                 long count = detectedObjects.stream()
-                        .filter(obj -> obj.getObjectClass() == objClass)
+                                                .filter(obj -> obj.getType() == objClass)
                         .count();
                 if (count > 0) {
                     System.out.println("  - " + objClass + ": " + count + " objects");
@@ -151,15 +177,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(4)
         @DisplayName("Detect objects with valid 3D positions")
         public void testDetectObjectsWithValid3DPositions() {
-            // ARRANGE: Create fusion data
-            FusionResult fusionData = new FusionResult(
-                    "ParticleFilterFusion",
-                    2000,
-                    0.6,
-                    1);
+                        LiDARSensorData lidar = createLiDAR(2000);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(fusionData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: All objects should have realistic 3D positions
             assertThat(detectedObjects)
@@ -173,6 +194,24 @@ public class ObjectDetectionEngineIntegrationTest {
 
             System.out.println("✓ PASS: All " + detectedObjects.size() +
                     " objects have valid 3D positions");
+        }
+
+        @Test
+        @Order(5)
+        @DisplayName("Detect vehicle using test scene resource")
+        public void testDetectObjects_WithVehicleInScene_DetectsVehicle() throws Exception {
+            LiDARSensorData lidar = createLiDARFromSceneResource("/test-scenes/vehicle_scene.json");
+
+            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
+
+            assertThat(detectedObjects)
+                    .as("Should detect objects from scene resource data")
+                    .isNotEmpty();
+
+            assertThat(detectedObjects)
+                    .anySatisfy(obj -> assertThat(obj.getType()).isEqualTo(ObjectType.VEHICLE));
+
+            System.out.println("✓ PASS: Vehicle detected from /test-scenes/vehicle_scene.json");
         }
     }
 
@@ -189,15 +228,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(1)
         @DisplayName("Handle low confidence fusion data (no premature failures)")
         public void testHandleLowConfidenceData() {
-            // ARRANGE: Create low-confidence fusion data
-            FusionResult lowConfidenceData = new FusionResult(
-                    "KalmanFilterFusion",
-                    1000,
-                    0.3, // Only 30% confidence
-                    1);
+                        LiDARSensorData lidar = createLiDAR(1000);
 
             // ACT: Attempt object detection
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lowConfidenceData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: Should gracefully handle, may detect fewer objects
             assertThat(detectedObjects)
@@ -213,15 +247,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(2)
         @DisplayName("Handle minimal data (sparse point cloud)")
         public void testHandleMinimalData() {
-            // ARRANGE: Create minimal fusion data (small point cloud)
-            FusionResult minimalData = new FusionResult(
-                    "ParticleFilterFusion",
-                    100, // Very small data
-                    0.5,
-                    1);
+                        LiDARSensorData lidar = createLiDAR(100);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(minimalData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: Should handle gracefully (may result in 0-1 objects)
             assertThat(detectedObjects)
@@ -236,15 +265,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(3)
         @DisplayName("Handle zero confidence fusion data (no crash)")
         public void testHandleZeroConfidenceData() {
-            // ARRANGE: Create fusion data with zero confidence
-            FusionResult zeroConfidenceData = new FusionResult(
-                    "KalmanFilterFusion",
-                    5000,
-                    0.0, // Zero confidence
-                    2);
+                        LiDARSensorData lidar = createLiDAR(5000);
 
             // ACT: Attempt detection (should not crash)
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(zeroConfidenceData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: Should not throw exception, returns empty or filtered list
             assertThat(detectedObjects)
@@ -258,15 +282,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(4)
         @DisplayName("Filter low-confidence objects correctly")
         public void testLowConfidenceObjectFiltering() {
-            // ARRANGE: Create data that will generate many low-confidence detections
-            FusionResult fusionData = new FusionResult(
-                    "ParticleFilterFusion",
-                    1000,
-                    0.4,
-                    1);
+                        LiDARSensorData lidar = createLiDAR(1000);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(fusionData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: All returned objects must pass confidence filter (>50%)
             assertThat(detectedObjects)
@@ -291,16 +310,11 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(1)
         @DisplayName("Handle maximum realistic data size")
         public void testMaximumDataSize() {
-            // ARRANGE: Create maximum realistic data size
-            FusionResult largeData = new FusionResult(
-                    "KalmanFilterFusion",
-                    100_000, // 100k data points
-                    0.9,
-                    3);
+                        LiDARSensorData lidar = createLiDAR(100_000);
 
             // ACT: Detect objects
             long startTime = System.currentTimeMillis();
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(largeData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
             long detectionTime = System.currentTimeMillis() - startTime;
 
             // ASSERT: Should complete within reasonable time (<1 second)
@@ -318,16 +332,11 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(2)
         @DisplayName("Performance: Detection completes in <500ms for typical data")
         public void testDetectionPerformance() {
-            // ARRANGE: Create typical autonomous driving data
-            FusionResult typicalData = new FusionResult(
-                    "KalmanFilterFusion",
-                    10000,
-                    0.85,
-                    3);
+                        LiDARSensorData lidar = createLiDAR(10000);
 
             // ACT: Measure detection time
             long startTime = System.currentTimeMillis();
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(typicalData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
             long detectionTime = System.currentTimeMillis() - startTime;
 
             // ASSERT: Should be fast for real-time processing
@@ -344,17 +353,8 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(3)
         @DisplayName("Reproducibility: Same input produces same detection count")
         public void testDetectionReproducibility() {
-            // ARRANGE: Create identical fusion data twice
-            FusionResult data1 = new FusionResult(
-                    "ParticleFilterFusion",
-                    5000,
-                    0.8,
-                    2);
-            FusionResult data2 = new FusionResult(
-                    "ParticleFilterFusion",
-                    5000,
-                    0.8,
-                    2);
+            LiDARSensorData data1 = createLiDAR(5000);
+            LiDARSensorData data2 = createLiDAR(5000);
 
             // ACT: Detect objects from both
             List<DetectedObject> objects1 = detectionEngine.detectObjects(data1);
@@ -384,15 +384,10 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(1)
         @DisplayName("Detected objects have unique IDs")
         public void testDetectedObjectsHaveUniqueIds() {
-            // ARRANGE: Create fusion data
-            FusionResult fusionData = new FusionResult(
-                    "KalmanFilterFusion",
-                    5000,
-                    0.9,
-                    2);
+                        LiDARSensorData lidar = createLiDAR(5000);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(fusionData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: All object IDs should be unique
             long uniqueIds = detectedObjects.stream()
@@ -411,19 +406,14 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(2)
         @DisplayName("Object distribution across detected classes is reasonable")
         public void testObjectDistribution() {
-            // ARRANGE: Create fusion data to generate diverse detections
-            FusionResult fusionData = new FusionResult(
-                    "KalmanFilterFusion",
-                    50000, // Large dataset
-                    0.85,
-                    3);
+                        LiDARSensorData lidar = createLiDAR(50000);
 
             // ACT: Detect objects
-            List<DetectedObject> detectedObjects = detectionEngine.detectObjects(fusionData);
+                        List<DetectedObject> detectedObjects = detectionEngine.detectObjects(lidar);
 
             // ASSERT: Should have multiple object types
             long classCount = detectedObjects.stream()
-                    .map(DetectedObject::getObjectClass)
+                    .map(DetectedObject::getType)
                     .distinct()
                     .count();
 
@@ -450,8 +440,7 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(1)
         @DisplayName("Graceful degradation with null fusion data")
         public void testNullFusionDataHandling() {
-            // ARRANGE: Null fusion result (should not happen, but test robustness)
-            FusionResult nullData = null;
+                        LiDARSensorData nullData = null;
 
             // ACT & ASSERT: Should throw NullPointerException (fail-fast)
             try {
@@ -466,9 +455,8 @@ public class ObjectDetectionEngineIntegrationTest {
         @Order(2)
         @DisplayName("Handle alternating high/low confidence data streams")
         public void testAlternatingQualityDataStreams() {
-            // ARRANGE: Simulate alternating good/bad data
-            FusionResult highQuality = new FusionResult("KalmanFilterFusion", 10000, 0.95, 3);
-            FusionResult lowQuality = new FusionResult("ParticleFilterFusion", 1000, 0.2, 1);
+                        LiDARSensorData highQuality = createLiDAR(10000);
+                        LiDARSensorData lowQuality = createLiDAR(1000);
 
             // ACT: Process both
             List<DetectedObject> highQualityObjects = detectionEngine.detectObjects(highQuality);

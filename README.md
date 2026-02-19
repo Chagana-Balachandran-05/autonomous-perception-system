@@ -117,7 +117,7 @@ private FusionAlgorithm mockKalmanFilter;
 @BeforeEach
 void setup() {
   MockitoAnnotations.openMocks(this);
-  Mockito.when(mockKalmanFilter.getAlgorithmName()).thenReturn("KalmanFilterFusion");
+  Mockito.when(mockKalmanFilter.getName()).thenReturn("KalmanFilterFusion");
   // ...
 }
 ```

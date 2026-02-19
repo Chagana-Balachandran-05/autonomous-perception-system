@@ -4,9 +4,62 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is the base class for all sensor data. It just keeps track of the basics: timestamp, sensor ID, and type.
+ * Abstract base class for all sensor data types in the autonomous perception system.
+ * Implements the Template Method design pattern for sensor data processing.
  *
- * If you're making a new kind of sensor, extend this and fill in the details. Keeps things simple and focused.
+ * <h2>SOLID Principles Applied:</h2>
+ * <ul>
+ *   <li><strong>Single Responsibility Principle (SRP)</strong>: This class has one responsibility -
+ *       managing sensor data representation and validation. It does not handle fusion, detection,
+ *       or security validation.</li>
+ *   <li><strong>Open-Closed Principle (OCP)</strong>: Extensible through inheritance
+ *       (LiDARSensorData, CameraSensorData) without modifying this base class.</li>
+ *   <li><strong>Liskov Substitution Principle (LSP)</strong>: Any subclass can be used wherever
+ *       SensorData is expected without breaking functionality.</li>
+ *   <li><strong>Dependency Inversion Principle (DIP)</strong>: Higher-level components depend on
+ *       this abstraction, not on concrete sensor implementations.</li>
+ * </ul>
+ *
+ * <h2>Design Patterns:</h2>
+ * <ul>
+ *   <li><strong>Template Method</strong>: The {@link #processData()} method defines the algorithm
+ *       skeleton, while subclasses implement sensor-specific behavior via {@link #isValid()} and
+ *       {@link #performSensorSpecificProcessing()}.</li>
+ *   <li><strong>Encapsulation</strong>: Fields are protected/private with controlled access through
+ *       public getters. No setters exist - data is immutable after construction.</li>
+ * </ul>
+ *
+ * <h2>Clean Code Techniques:</h2>
+ * <ul>
+ *   <li><strong>Meaningful Names</strong>: Methods like isValid(), processData(), getMetricsReport()
+ *       clearly express their intent without needing additional documentation.</li>
+ *   <li><strong>Guard Clauses</strong>: The processData() method validates data before processing,
+ *       failing fast on invalid input.</li>
+ *   <li><strong>DRY (Don't Repeat Yourself)</strong>: Common timestamp, ID, and type handling
+ *       exists once here rather than duplicated in every sensor subclass.</li>
+ *   <li><strong>Final Fields</strong>: Immutability prevents accidental state changes and makes
+ *       the class thread-safe.</li>
+ * </ul>
+ *
+ * <h2>Usage Example:</h2>
+ * <pre>{@code
+ * // Create specific sensor data
+ * SensorData lidar = new LiDARSensorData(timestamp, "LIDAR-01", pointCloudData);
+ *
+ * // Process through abstract interface
+ * if (lidar.isValid()) {
+ *     String result = lidar.processData();
+ *     System.out.println(lidar.getMetricsReport());
+ * }
+ * }</pre>
+ *
+ * @author Chagana Balachandran
+ * @version 1.0
+ * @since 2026-02-10
+ *
+ * @see LiDARSensorData
+ * @see CameraSensorData
+ * @see com.moderndaytech.perception.fusion.SensorFusionProcessor
  */
 public abstract class SensorData {
     protected static final Logger logger = LoggerFactory.getLogger(SensorData.class);
@@ -43,18 +96,34 @@ public abstract class SensorData {
     }
     
     /**
-     * This is a template method: it runs the basic steps for processing sensor data, 
-     * but lets subclasses handle the details.
+     * Template method that defines the sensor data processing workflow.
+     * Validates data before processing and logs the operation.
+     *
+     * <p>This method is final to enforce the processing sequence:
+     * <ol>
+     *   <li>Validate sensor data using {@link #validateSensorData()}</li>
+     *   <li>Perform sensor-specific processing via {@link #performSensorSpecificProcessing()}</li>
+     *   <li>Return processed result</li>
+     * </ol>
+     *
+     * <p>Subclasses cannot override this method but must implement the abstract methods
+     * it calls to define sensor-specific behavior.
+     *
+     * @return processed sensor data as a string representation
+     * @throws IllegalStateException if sensor data fails validation
+     *
+     * @see #validateSensorData()
+     * @see #performSensorSpecificProcessing()
      */
     public final String processData() {
-        logger.info("Processing data from sensor: {}", sensorId);
+        logger.info("Processing data from sensor: {}", sanitizeForLog(sensorId));
         
         if (!validateSensorData()) {
             throw new IllegalStateException("Sensor data validation failed for " + sensorId);
         }
         
         String processed = performSensorSpecificProcessing();
-        logger.info("Processing complete for sensor: {}", sensorId);
+        logger.info("Processing complete for sensor: {}", sanitizeForLog(sensorId));
         
         return processed;
     }
@@ -70,15 +139,10 @@ public abstract class SensorData {
         return String.format("SensorData[type=%s, id=%s, timestamp=%d]", 
             sensorType, sensorId, timestamp);
     }
+
+    private String sanitizeForLog(String input) {
+        if (input == null) return "null";
+        return input.replaceAll("[\r\n\t]", "_").substring(0, Math.min(input.length(), 100));
+    }
 }
 
-/**
- * Enum for sensor types used in autonomous driving
- */
-enum SensorType {
-    LIDAR,
-    CAMERA,
-    RADAR,
-    GPS,
-    IMU
-}

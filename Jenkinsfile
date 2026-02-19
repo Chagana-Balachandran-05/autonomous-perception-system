@@ -1,142 +1,119 @@
 pipeline {
     agent any
-    
+
     environment {
+        MAVEN_OPTS = '-Xmx1024m'
         PROJECT_NAME = 'autonomous-perception-system'
-        MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                echo '╔════════════════════════════════════════════╗'
-                echo '║   Stage 1: Checkout Source Code           ║'
-                echo '╚════════════════════════════════════════════╝'
-                // git checkout would go here
-                echo '✓ Source code checked out successfully'
+                checkout scm
+                sh 'git log -1'
             }
         }
-        
+
         stage('Build') {
             steps {
-                echo '╔════════════════════════════════════════════╗'
-                echo '║   Stage 2: Build Application               ║'
-                echo '╚════════════════════════════════════════════╝'
                 sh 'mvn clean compile'
-                echo '✓ Build completed successfully'
             }
         }
-        
-        stage('Security Tests') {
-            parallel {
-                stage('SCA - Dependency Check') {
-                    steps {
-                        echo '───────────────────────────────────────────'
-                        echo 'Running SCA: Software Composition Analysis'
-                        echo '───────────────────────────────────────────'
-                        sh 'mvn org.owasp:dependency-check-maven:check || true'
-                        echo '✓ SCA scan completed'
-                    }
-                }
-                
-                stage('SAST - Static Analysis') {
-                    steps {
-                        echo '───────────────────────────────────────────'
-                        echo 'Running SAST: Static Code Analysis'
-                        echo '───────────────────────────────────────────'
-                        sh 'mvn spotbugs:check || true'
-                        echo '✓ SAST scan completed'
-                    }
-                }
-                
-                stage('Unit Tests') {
-                    steps {
-                        echo '───────────────────────────────────────────'
-                        echo 'Running Unit & Security Tests'
-                        echo '───────────────────────────────────────────'
-                        sh 'mvn test'
-                        echo '✓ Tests completed'
-                    }
+
+        stage('SCA - Dependency Check') {
+            steps {
+                sh 'mvn org.owasp:dependency-check-maven:check'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'target/dependency-check-report.html',
+                                     allowEmptyArchive: true
                 }
             }
         }
-        
+
+        stage('SAST - Static Analysis') {
+            steps {
+                sh 'mvn spotbugs:check'
+            }
+            post {
+                always {
+                    publishHTML([
+                        reportDir: 'target/site',
+                        reportFiles: 'spotbugs.html',
+                        reportName: 'SpotBugs Report',
+                        keepAll: true
+                    ])
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh 'mvn test -Dtest=*Test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                sh 'mvn test -Dtest=*IntegrationTest'
+            }
+        }
+
+        stage('DAST - Security Tests') {
+            steps {
+                sh 'mvn test -Dtest=AutonomousPerceptionSecurityTest'
+            }
+        }
+
         stage('Code Coverage') {
             steps {
-                echo '╔════════════════════════════════════════════╗'
-                echo '║   Stage 3: Code Coverage Analysis          ║'
-                echo '╚════════════════════════════════════════════╝'
                 sh 'mvn jacoco:report'
-                echo '✓ Coverage report generated'
             }
-        }
-        
-        stage('Security Gate') {
-            steps {
-                echo '╔════════════════════════════════════════════╗'
-                echo '║   Stage 4: Security Gate Evaluation        ║'
-                echo '╚════════════════════════════════════════════╝'
-                script {
-                    echo 'Evaluating security test results...'
-                    // In real scenario, this would check actual results
-                    def criticalIssues = 0
-                    echo "Critical issues found: ${criticalIssues}"
-                    
-                    if (criticalIssues > 0) {
-                        error('Security gate failed: Critical issues detected')
-                    }
-                    echo '✓ Security gate passed'
+            post {
+                always {
+                    jacoco(
+                        execPattern: 'target/jacoco.exec',
+                        classPattern: 'target/classes',
+                        sourcePattern: 'src/main/java'
+                    )
                 }
             }
         }
-        
-        stage('Package') {
+
+        stage('Security Gate') {
             steps {
-                echo '╔════════════════════════════════════════════╗'
-                echo '║   Stage 5: Package Application             ║'
-                echo '╚════════════════════════════════════════════╝'
-                sh 'mvn package -DskipTests'
-                echo '✓ Application packaged successfully'
+                script {
+                    if (currentBuild.result == 'FAILURE') {
+                        error('Security gate failed - vulnerabilities detected')
+                    }
+                }
             }
         }
-        
-        stage('Deploy') {
+
+        stage('Package') {
             steps {
-                echo '╔════════════════════════════════════════════╗'
-                echo '║   Stage 6: Deploy to Staging               ║'
-                echo '╚════════════════════════════════════════════╝'
-                echo '✓ Deployment simulated (staging environment)'
+                sh 'mvn package -DskipTests'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'target/*.jar'
+                }
             }
         }
     }
-    
+
     post {
         success {
-            echo '\n╔═══════════════════════════════════════════════════╗'
-            echo '║                                                   ║'
-            echo '║    ✓ PIPELINE COMPLETED SUCCESSFULLY              ║'
-            echo '║                                                   ║'
-            echo '║  All security tests passed                        ║'
-            echo '║  Application approved for deployment              ║'
-            echo '║                                                   ║'
-            echo '╚═══════════════════════════════════════════════════╝\n'
+            echo 'Pipeline succeeded - artifact is deployment ready'
         }
-        
         failure {
-            echo '\n╔═══════════════════════════════════════════════════╗'
-            echo '║                                                   ║'
-            echo '║    ✗ PIPELINE FAILED                              ║'
-            echo '║                                                   ║'
-            echo '║  Security issues detected                         ║'
-            echo '║  Deployment blocked                               ║'
-            echo '║                                                   ║'
-            echo '╚═══════════════════════════════════════════════════╝\n'
-        }
-        
-        always {
-            echo 'Archiving test reports...'
-            // Archive reports
-            echo '✓ Reports archived'
+            echo 'Pipeline FAILED - check security gates and test results'
         }
     }
 }

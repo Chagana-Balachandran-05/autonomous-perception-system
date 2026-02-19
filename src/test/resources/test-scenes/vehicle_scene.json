@@ -1,0 +1,8 @@
+{
+  "scene_id": "test_001",
+  "frame_id": 1,
+  "objects": [
+    { "type": "Vehicle", "x": 10.0, "y": 5.0, "z": 0.0, "confidence": 0.89 }
+  ],
+  "lidar_points": 10000
+}

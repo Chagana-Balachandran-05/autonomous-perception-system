@@ -4,31 +4,27 @@ import com.moderndaytech.perception.sensor.SensorData;
 import java.util.List;
 
 /**
- * Interface for sensor fusion algorithms.
- * Defines the contract for combining multiple sensor readings into a unified result.
- * 
- * <p>This interface demonstrates the Strategy Pattern and Open-Closed Principle,
- * allowing new fusion algorithms to be added without modifying existing code.</p>
- * 
+ * Strategy interface for sensor fusion algorithms.
+ *
+ * <h2>Design Intent:</h2>
+ * <ul>
+ *   <li>Defines the contract for pluggable fusion implementations such as Kalman, Particle, and weighted average.</li>
+ *   <li>Allows runtime algorithm selection without changing the orchestration logic.</li>
+ * </ul>
+ *
+ * <h2>SOLID Principles Applied:</h2>
+ * <ul>
+ *   <li><strong>Open-Closed Principle (OCP)</strong>: New algorithms are added by implementing this interface.</li>
+ *   <li><strong>Liskov Substitution Principle (LSP)</strong>: Any implementation can substitute another transparently.</li>
+ *   <li><strong>Dependency Inversion Principle (DIP)</strong>: High-level fusion processing depends on this abstraction.</li>
+ * </ul>
+ *
  * @author Chagana Balachandran
  * @version 1.0
- * @see KalmanFilterFusion
- * @see ParticleFilterFusion
- * @see WeightedAverageFusion
+ * @since 2026-02-10
  */
 public interface FusionAlgorithm {
-    /**
-     * Fuses multiple sensor data inputs into a single unified result.
-     * 
-     * @param sensorData List of sensor data to be fused
-     * @return FusionResult containing the fused state and confidence
-     * @throws IllegalArgumentException if sensorData is null or empty
-     */
     FusionResult fuse(List<SensorData> sensorData);
-    /**
-     * Returns the name of this fusion algorithm.
-     * 
-     * @return Algorithm name (e.g., "Kalman Filter", "Particle Filter")
-     */
+
     String getName();
 }

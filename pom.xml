@@ -17,17 +17,10 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <junit.version>5.9.3</junit.version>
+        <junit.version>5.10.1</junit.version>
     </properties>
 
     <dependencies>
-                <!-- JUnit Jupiter Params for Parameterized Tests -->
-                <dependency>
-                    <groupId>org.junit.jupiter</groupId>
-                    <artifactId>junit-jupiter-params</artifactId>
-                    <version>${junit.version}</version>
-                    <scope>test</scope>
-                </dependency>
         <!-- JUnit 5 for Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -50,11 +43,25 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Mockito for Mocking -->
+        <!-- Mockito for Mocking in Tests -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <version>5.2.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.2.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JUnit Params for Parameterized Tests -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -104,12 +111,13 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
+                    <parallel>classes</parallel>
+                    <threadCount>4</threadCount>
+                    <reuseForks>true</reuseForks>
                     <includes>
                         <include>**/*Test.java</include>
                         <include>**/*IntegrationTest.java</include>
                     </includes>
-                    <parallel>methods</parallel>
-                    <threadCount>4</threadCount>
                 </configuration>
             </plugin>
 
@@ -159,9 +167,10 @@
                 <version>4.7.3.5</version>
                 <configuration>
                     <effort>Max</effort>
-                    <threshold>Medium</threshold>
+                    <threshold>Low</threshold>
                     <xmlOutput>true</xmlOutput>
                     <failOnError>true</failOnError>
+                    <includeFilterFile>spotbugs-security-include.xml</includeFilterFile>
                     <plugins>
                         <plugin>
                             <groupId>com.h3xstream.findsecbugs</groupId>
@@ -169,8 +178,6 @@
                             <version>1.13.0</version>
                         </plugin>
                     </plugins>
-                    <includeFilterFile>spotbugs-security-include.xml</includeFilterFile>
-                    <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
             </plugin>
         </plugins>

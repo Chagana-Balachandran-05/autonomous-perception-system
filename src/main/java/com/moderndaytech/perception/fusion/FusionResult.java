@@ -11,6 +11,7 @@ public class FusionResult {
     private final double confidenceScore;
     private final int sensorCount;
     private final Object estimatedState;
+    private final long timestamp;
 
     public FusionResult(String algorithmUsed, int totalDataPoints,
             double confidenceScore, int sensorCount) {
@@ -24,6 +25,7 @@ public class FusionResult {
         this.confidenceScore = confidenceScore;
         this.sensorCount = sensorCount;
         this.estimatedState = estimatedState;
+        this.timestamp = System.currentTimeMillis();
     }
 
 
@@ -69,7 +71,7 @@ public class FusionResult {
 
     // Used in integration tests  
     public long getTimestamp() {
-        return System.currentTimeMillis();
+        return timestamp;
     }
 
     @Override

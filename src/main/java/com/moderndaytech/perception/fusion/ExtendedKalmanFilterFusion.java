@@ -15,8 +15,9 @@ public class ExtendedKalmanFilterFusion implements FusionAlgorithm {
             return FusionResult.empty();
         }
         int totalPoints = sensorData.stream().mapToInt(SensorData::getDataSize).sum();
-        // Extended Kalman handles non-linear state transitions
-        double confidence = 0.88;
+        double confidence = Math.min(0.93,
+            (double) sensorData.stream().filter(SensorData::isValid).count()
+            / sensorData.size() * 0.95);
         return new FusionResult(getName(), totalPoints, confidence, sensorData.size());
     }
 

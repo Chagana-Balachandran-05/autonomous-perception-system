@@ -14,12 +14,42 @@ class SensorDataTest {
     }
 
     @Test
-    void testProcessData_WithInvalidTimestamp_ThrowsException() {
-        SensorData sensor = new LiDARSensorData(-1L, "TEST-01",
-            new float[]{1.0f}, new float[]{1.0f}, new float[]{0.0f}, new float[]{0.8f});
-        assertThatThrownBy(sensor::processData)
-            .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("validation failed");
+    void testConstructor_WithNegativeTimestamp_ThrowsIllegalArgumentException() {
+        assertThatThrownBy(() ->
+            new LiDARSensorData(-1L, "TEST-01",
+                new float[]{1.0f}, new float[]{1.0f},
+                new float[]{0.0f}, new float[]{0.8f}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Timestamp must be positive");
+    }
+
+    @Test
+    void testConstructor_WithNullSensorId_ThrowsIllegalArgumentException() {
+        assertThatThrownBy(() ->
+            new LiDARSensorData(System.currentTimeMillis(), null,
+                new float[]{1.0f}, new float[]{1.0f},
+                new float[]{0.0f}, new float[]{0.8f}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Sensor ID cannot be null");
+    }
+
+    @Test
+    void testLiDARConstructor_WithNullArrays_ThrowsException() {
+        assertThatThrownBy(() ->
+            new LiDARSensorData(System.currentTimeMillis(), "LIDAR-01",
+                null, null, null, null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("cannot be null");
+    }
+
+    @Test
+    void testLiDARConstructor_WithMismatchedArrayLengths_ThrowsException() {
+        assertThatThrownBy(() ->
+            new LiDARSensorData(System.currentTimeMillis(), "LIDAR-01",
+                new float[]{1.0f, 2.0f}, new float[]{1.0f},
+                new float[]{0.0f}, new float[]{0.8f}))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("equal length");
     }
 
     @Test

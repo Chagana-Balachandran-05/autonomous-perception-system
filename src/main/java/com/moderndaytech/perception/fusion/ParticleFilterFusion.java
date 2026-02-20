@@ -11,12 +11,11 @@ public class ParticleFilterFusion implements FusionAlgorithm {
 
     @Override
     public FusionResult fuse(List<SensorData> sensorData) {
-        logger.info("ParticleFilterFusion: fusing {} sensors", sensorData.size());
-
-        // Handles any number of sensors including 0 and 1 (LSP compliance)
         if (sensorData == null || sensorData.isEmpty()) {
             return FusionResult.empty();
         }
+
+        logger.info("ParticleFilterFusion: fusing {} sensors", sensorData.size());
 
         int totalPoints = sensorData.stream()
             .mapToInt(SensorData::getDataSize)

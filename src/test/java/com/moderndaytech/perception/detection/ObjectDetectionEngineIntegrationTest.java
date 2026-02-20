@@ -1,9 +1,9 @@
 package com.moderndaytech.perception.detection;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.MethodOrderer;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.moderndaytech.perception.dataset.ONCEDatasetLoader;
+import com.moderndaytech.perception.dataset.ONCESceneAnnotation;
 import com.moderndaytech.perception.sensor.LiDARSensorData;
 
 /**
@@ -63,26 +63,13 @@ public class ObjectDetectionEngineIntegrationTest {
         }
 
         private LiDARSensorData createLiDARFromSceneResource(String resourcePath) throws Exception {
-                try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
-                        assertThat(inputStream)
-                                .as("Scene resource should exist: " + resourcePath)
-                                .isNotNull();
-
-                        String sceneJson = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-                        JsonObject scene = JsonParser.parseString(sceneJson).getAsJsonObject();
-                        int points = scene.get("lidar_points").getAsInt();
-
-                        float[] x = new float[points];
-                        float[] y = new float[points];
-                        float[] z = new float[points];
-                        float[] intensity = new float[points];
-                        for (int i = 0; i < points; i++) {
-                                x[i] = i;
-                                y[i] = i * 0.5f;
-                                z[i] = 0.1f;
-                                intensity[i] = 0.8f;
-                        }
-                        return new LiDARSensorData(System.currentTimeMillis(), "TEST-SCENE-LIDAR", x, y, z, intensity);
+                ONCEDatasetLoader loader = new ONCEDatasetLoader(
+                        new com.moderndaytech.perception.security.SecurityValidator());
+                try (InputStream stream = getClass().getResourceAsStream(resourcePath)) {
+                        assertThat(stream).as("Scene resource must exist: " + resourcePath).isNotNull();
+                        String filename = resourcePath.substring(resourcePath.lastIndexOf('/') + 1);
+                        ONCESceneAnnotation annotation = loader.loadAnnotation(stream, filename);
+                        return loader.buildLiDARSensor(annotation);
                 }
         }
 
@@ -438,17 +425,11 @@ public class ObjectDetectionEngineIntegrationTest {
 
         @Test
         @Order(1)
-        @DisplayName("Graceful degradation with null fusion data")
-        public void testNullFusionDataHandling() {
-                        LiDARSensorData nullData = null;
-
-            // ACT & ASSERT: Should throw NullPointerException (fail-fast)
-            try {
-                detectionEngine.detectObjects(nullData);
-                System.out.println("⚠ WARNING: Null fusion data not caught!");
-            } catch (NullPointerException e) {
-                System.out.println("✓ PASS: Null fusion data caught (fail-fast)");
-            }
+                @DisplayName("Null sensor data rejected with IllegalArgumentException")
+                public void testNullSensorData_ThrowsIllegalArgumentException() {
+                        assertThatThrownBy(() -> detectionEngine.detectObjects(null))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessageContaining("cannot be null");
         }
 
         @Test

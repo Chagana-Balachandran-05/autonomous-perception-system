@@ -1,0 +1,10 @@
+{
+  "scene_id": "000004",
+  "frame_id": "1616004923800",
+  "timestamp": 1616004923800,
+  "lidar_points": 12000,
+  "annos": {
+    "names": [],
+    "boxes_3d": []
+  }
+}

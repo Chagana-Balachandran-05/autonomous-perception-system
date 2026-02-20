@@ -72,6 +72,17 @@ public abstract class SensorData {
      * Make a new sensor data object. Just give it the time, ID, and type.
      */
     protected SensorData(long timestamp, String sensorId, SensorType sensorType) {
+        if (timestamp <= 0) {
+            throw new IllegalArgumentException(
+                "Timestamp must be positive, received: " + timestamp);
+        }
+        if (sensorId == null || sensorId.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "Sensor ID cannot be null or empty");
+        }
+        if (sensorType == null) {
+            throw new IllegalArgumentException("SensorType cannot be null");
+        }
         this.timestamp = timestamp;
         this.sensorId = sensorId;
         this.sensorType = sensorType;

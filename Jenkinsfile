@@ -65,7 +65,7 @@ pipeline {
             }
         }
 
-        stage('DAST - Security Tests') {
+        stage('Runtime Security Validation') {
             steps {
                 sh 'mvn test -Dtest=AutonomousPerceptionSecurityTest'
             }

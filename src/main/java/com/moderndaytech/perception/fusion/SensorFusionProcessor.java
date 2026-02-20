@@ -48,12 +48,24 @@ import java.util.List;
  */
 public class SensorFusionProcessor {
     private static final Logger logger = LoggerFactory.getLogger(SensorFusionProcessor.class);
-    private static final long SYNC_WINDOW_MS = 50;
+    private static final long DEFAULT_SYNC_WINDOW_MS = 50;
 
     private final FusionAlgorithm algorithm;
+    private final long syncWindowMs;
 
     public SensorFusionProcessor(FusionAlgorithm algorithm) {
+        this(algorithm, DEFAULT_SYNC_WINDOW_MS);
+    }
+
+    public SensorFusionProcessor(FusionAlgorithm algorithm, long syncWindowMs) {
+        if (algorithm == null) {
+            throw new IllegalArgumentException("FusionAlgorithm cannot be null");
+        }
+        if (syncWindowMs <= 0) {
+            throw new IllegalArgumentException("Sync window must be positive");
+        }
         this.algorithm = algorithm;
+        this.syncWindowMs = syncWindowMs;
     }
 
     public FusionResult processSensors(List<SensorData> sensors) {
@@ -82,7 +94,7 @@ public class SensorFusionProcessor {
         List<SensorData> synced = new ArrayList<>();
         for (SensorData sensor : sensors) {
             long timeDiff = Math.abs(sensor.getTimestamp() - targetTime);
-            if (timeDiff <= SYNC_WINDOW_MS) {
+            if (timeDiff <= syncWindowMs) {
                 synced.add(sensor);
             }
         }

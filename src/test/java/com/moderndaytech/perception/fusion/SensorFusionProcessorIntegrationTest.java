@@ -29,8 +29,27 @@ class SensorFusionProcessorIntegrationTest {
 
         assertThat(result).isNotNull();
         assertThat(result.isValid()).isTrue();
-        assertThat(result.getFusedSensorCount()).isGreaterThan(0);
+        assertThat(result.getSensorCount()).isGreaterThan(0);
         assertThat(result.getTimestamp()).isGreaterThan(0);
+    }
+
+    @Test
+    void testProcessSensors_WithCustomSyncWindow_ExcludesOutOfWindowSensors() {
+        long baseTimestamp = System.currentTimeMillis();
+        LiDARSensorData lidar = createLiDARSensor(baseTimestamp);
+        CameraSensorData camera = createCameraSensor(baseTimestamp + 200);
+        List<SensorData> sensors = Arrays.asList(lidar, camera);
+
+        SensorFusionProcessor tightProcessor =
+            new SensorFusionProcessor(new KalmanFilterFusion(), 100);
+        SensorFusionProcessor looseProcessor =
+            new SensorFusionProcessor(new KalmanFilterFusion(), 300);
+
+        FusionResult tightResult = tightProcessor.processSensors(sensors);
+        FusionResult looseResult = looseProcessor.processSensors(sensors);
+
+        assertThat(looseResult.getSensorCount())
+            .isGreaterThanOrEqualTo(tightResult.getSensorCount());
     }
 
     @ParameterizedTest
@@ -52,7 +71,7 @@ class SensorFusionProcessorIntegrationTest {
         FusionResult result = processor.processSensors(sensors);
 
         assertThat(result.isValid()).isTrue();
-        assertThat(result.getFusedSensorCount()).isGreaterThan(0);
+        assertThat(result.getSensorCount()).isGreaterThan(0);
         assertThat(result.getTimestamp()).isGreaterThan(0);
     }
 

@@ -41,6 +41,9 @@ public class ObjectDetectionEngine {
     private static final double CONFIDENCE_THRESHOLD = 0.5;
 
     public List<DetectedObject> detectObjects(SensorData sensorData) {
+        if (sensorData == null) {
+            throw new IllegalArgumentException("SensorData cannot be null");
+        }
         logger.info("Starting object detection for sensor: {}", sanitizeForLog(sensorData.getSensorId()));
         long startTime = System.currentTimeMillis();
 

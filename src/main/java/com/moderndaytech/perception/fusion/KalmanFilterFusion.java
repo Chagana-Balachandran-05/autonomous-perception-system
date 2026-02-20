@@ -11,11 +11,11 @@ public class KalmanFilterFusion implements FusionAlgorithm {
 
     @Override
     public FusionResult fuse(List<SensorData> sensorData) {
-        logger.info("KalmanFilterFusion: fusing {} sensors", sensorData.size());
-
         if (sensorData == null || sensorData.isEmpty()) {
             return FusionResult.empty();
         }
+
+        logger.info("KalmanFilterFusion: fusing {} sensors", sensorData.size());
 
         int totalPoints = sensorData.stream()
             .mapToInt(SensorData::getDataSize)

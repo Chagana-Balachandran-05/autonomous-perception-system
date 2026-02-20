@@ -1,8 +1,14 @@
 {
-  "scene_id": "test_001",
-  "frame_id": 1,
-  "objects": [
-    { "type": "Vehicle", "x": 10.0, "y": 5.0, "z": 0.0, "confidence": 0.89 }
-  ],
-  "lidar_points": 10000
+  "scene_id": "000001",
+  "frame_id": "1616004920200",
+  "timestamp": 1616004920200,
+  "lidar_points": 85432,
+  "annos": {
+    "names": ["Car", "Car", "Pedestrian"],
+    "boxes_3d": [
+      [10.5, 3.2, 0.5, 4.5, 2.0, 1.8, 1.57],
+      [25.1, -5.3, 0.5, 4.2, 1.9, 1.7, 0.0],
+      [8.3, -2.1, 0.2, 0.8, 0.6, 1.75, 0.3]
+    ]
+  }
 }

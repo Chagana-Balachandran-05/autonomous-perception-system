@@ -107,7 +107,7 @@ public class TestDataFactory {
      * Create an INVALID LiDAR sensor (for negative testing)
      */
     public static LiDARSensorData createInvalidLiDARSensor() {
-        long timestamp = -1; // Invalid timestamp
+        long timestamp = System.currentTimeMillis();
         String sensorId = "INVALID-LIDAR";
         float[] x = new float[0];
         float[] y = new float[0];

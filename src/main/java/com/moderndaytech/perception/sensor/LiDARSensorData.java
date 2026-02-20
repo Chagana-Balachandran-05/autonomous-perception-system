@@ -14,6 +14,14 @@ public class LiDARSensorData extends SensorData {
     public LiDARSensorData(long timestamp, String sensorId,
                            float[] x, float[] y, float[] z, float[] intensity) {
         super(timestamp, sensorId, SensorType.LIDAR);
+        if (x == null || y == null || z == null || intensity == null) {
+            throw new IllegalArgumentException("Point cloud arrays cannot be null");
+        }
+        if (x.length != y.length || x.length != z.length || x.length != intensity.length) {
+            throw new IllegalArgumentException(
+                "Point cloud arrays must have equal length. x=" + x.length +
+                " y=" + y.length + " z=" + z.length + " intensity=" + intensity.length);
+        }
         this.x = x;
         this.y = y;
         this.z = z;
@@ -44,6 +52,10 @@ public class LiDARSensorData extends SensorData {
     public int getPointCount() { return x.length; }
 
     public Point3D getPoint(int index) {
+        if (index < 0 || index >= x.length) {
+            throw new IndexOutOfBoundsException(
+                "Point index " + index + " out of bounds for size " + x.length);
+        }
         return new Point3D(x[index], y[index], z[index], intensity[index]);
     }
 }

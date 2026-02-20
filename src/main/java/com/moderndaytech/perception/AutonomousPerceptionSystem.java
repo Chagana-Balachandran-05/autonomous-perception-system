@@ -22,11 +22,6 @@ public class AutonomousPerceptionSystem {
     public static void main(String[] args) {
         logger.info("=== ModernDayTech Autonomous Perception System Starting ===");
 
-        // DIP: inject concrete algorithm into processor
-        FusionAlgorithm algorithm = new KalmanFilterFusion();
-        SensorFusionProcessor processor = new SensorFusionProcessor(algorithm);
-        ObjectDetectionEngine detectionEngine = new ObjectDetectionEngine();
-
         // Create sample sensor data
         float[] xs = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
         float[] ys = {0.5f, 1.0f, 1.5f, 2.0f, 2.5f};
@@ -40,6 +35,21 @@ public class AutonomousPerceptionSystem {
 
         List<SensorData> sensors = Arrays.asList(lidar, camera);
 
+        // DIP + Polymorphism: algorithm selected at runtime based on sensor count
+        // With 2+ sensors: Kalman is accurate and fast
+        // With 1 sensor: Particle handles higher uncertainty
+        boolean highUncertainty = sensors.size() < 2;
+        FusionAlgorithm algorithm = highUncertainty
+            ? new ParticleFilterFusion()
+            : new KalmanFilterFusion();
+
+        logger.info("Selected algorithm: {} (highUncertainty={})",
+            algorithm.getName(), highUncertainty);
+
+        // Single processor — algorithm injected, same call regardless of which algorithm runs
+        SensorFusionProcessor processor = new SensorFusionProcessor(algorithm);
+        ObjectDetectionEngine detectionEngine = new ObjectDetectionEngine();
+
         // Process
         long start = System.currentTimeMillis();
         FusionResult fusionResult = processor.processSensors(sensors);
@@ -47,13 +57,8 @@ public class AutonomousPerceptionSystem {
         long elapsed = System.currentTimeMillis() - start;
 
         PerceptionResult result = new PerceptionResult(fusionResult, detected, elapsed);
-        logger.info("Perception complete: {} objects detected in {}ms",
-            result.getObjectCount(), result.getProcessingTimeMs());
-
-        // Swap to particle filter (DIP and polymorphism demo)
-        FusionAlgorithm particleAlgorithm = new ParticleFilterFusion();
-        SensorFusionProcessor particleProcessor = new SensorFusionProcessor(particleAlgorithm);
-        FusionResult particleResult = particleProcessor.processSensors(sensors);
-        logger.info("Particle filter result: confidence={}", particleResult.getConfidence());
+        logger.info("Perception complete: {} objects detected in {}ms using {}",
+            result.getObjectCount(), result.getProcessingTimeMs(),
+            fusionResult.getAlgorithmUsed());
     }
 }

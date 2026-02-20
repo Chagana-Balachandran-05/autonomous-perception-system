@@ -34,10 +34,8 @@ jobs:
       - name: SAST Scan (SpotBugs)
         run: mvn spotbugs:check
 
-      - name: DAST Simulation
-        run: |
-          echo 'Simulating DAST scan (e.g., OWASP ZAP) on http://localhost:8080/api/test'
-          echo '[DAST] No vulnerabilities found in simulation.'
+      - name: Runtime Security Validation (DAST-equivalent for Java API)
+        run: mvn test -Dtest=AutonomousPerceptionSecurityTest
 
       - name: Upload Security & Coverage Artifacts
         uses: actions/upload-artifact@v4

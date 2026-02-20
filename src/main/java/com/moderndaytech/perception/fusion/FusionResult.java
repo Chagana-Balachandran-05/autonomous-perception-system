@@ -37,21 +37,11 @@ public class FusionResult {
         return totalDataPoints;
     }
 
-    public double getConfidenceScore() {
-        return confidenceScore;
-    }
-
-    // Alias for document compatibility
     public double getConfidence() {
         return confidenceScore;
     }
 
     public int getSensorCount() {
-        return sensorCount;
-    }
-
-    // Alias for document compatibility
-    public int getFusedSensorCount() {
         return sensorCount;
     }
 

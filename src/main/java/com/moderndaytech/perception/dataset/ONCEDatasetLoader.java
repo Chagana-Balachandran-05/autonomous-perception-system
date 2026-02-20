@@ -70,7 +70,7 @@ public class ONCEDatasetLoader {
                                               String sourceName) throws IOException {
         securityValidator.validateSensorId(sourceName.replace(".json", "").replace("/", "-"));
 
-        logger.info("Loading ONCE annotation from: {}", sanitizeForLog(sourceName));
+        logger.info("Loading ONCE annotation from: " + sanitizeForLog(sourceName));
 
         try (InputStreamReader reader = new InputStreamReader(
                 inputStream, StandardCharsets.UTF_8)) {
@@ -110,10 +110,13 @@ public class ONCEDatasetLoader {
             ONCESceneAnnotation annotation = new ONCESceneAnnotation(
                 sceneId, frameId, timestamp, lidarPoints, names, boxes);
 
-            logger.info("Loaded scene {}: {} LiDAR points, {} annotated objects",
-                sanitizeForLog(sceneId),
-                sanitizeForLog(lidarPoints),
-                sanitizeForLog(annotation.getAnnotationCount()));
+            logger.info("Loaded scene "
+                + sanitizeForLog(sceneId)
+                + ": "
+                + sanitizeForLog(lidarPoints)
+                + " LiDAR points, "
+                + sanitizeForLog(annotation.getAnnotationCount())
+                + " annotated objects");
 
             return annotation;
         }
@@ -136,9 +139,10 @@ public class ONCEDatasetLoader {
      */
     public LiDARSensorData buildLiDARSensor(ONCESceneAnnotation annotation) {
         int n = annotation.getLidarPoints();
-        logger.info("Building LiDAR sensor with {} points for scene {}",
-            sanitizeForLog(n),
-            sanitizeForLog(annotation.getSceneId()));
+        logger.info("Building LiDAR sensor with "
+            + sanitizeForLog(n)
+            + " points for scene "
+            + sanitizeForLog(annotation.getSceneId()));
 
         float[] x = new float[n];
         float[] y = new float[n];

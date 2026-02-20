@@ -66,7 +66,11 @@ public class FusionResult {
 
     @Override
     public String toString() {
-        return String.format("FusionResult[algorithm=%s, dataPoints=%d, confidence=%.2f, sensors=%d]",
-                algorithmUsed, totalDataPoints, confidenceScore, sensorCount);
+        String safeAlgorithm = algorithmUsed != null
+            ? algorithmUsed.replaceAll("[\\r\\n\\t]", "_")
+            : "null";
+        return String.format(
+            "FusionResult[algorithm=%s, dataPoints=%d, confidence=%.2f, sensors=%d]",
+            safeAlgorithm, totalDataPoints, confidenceScore, sensorCount);
     }
 }

@@ -46,7 +46,10 @@ public class ONCESceneAnnotation {
 
     @Override
     public String toString() {
-        return String.format("ONCESceneAnnotation[scene=%s, frame=%s, points=%d, objects=%d]",
-            sceneId, frameId, lidarPoints, objectNames.size());
+        String safeSceneId = sceneId == null ? "null" : sceneId.replaceAll("[\\r\\n\\t]", "_");
+        String safeFrameId = frameId == null ? "null" : frameId.replaceAll("[\\r\\n\\t]", "_");
+        return String.format(
+            "ONCESceneAnnotation[scene=%s, frame=%s, points=%d, objects=%d]",
+            safeSceneId, safeFrameId, lidarPoints, objectNames.size());
     }
 }

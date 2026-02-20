@@ -15,7 +15,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.random.RandomGenerator;
 
 /**
  * Loads and parses ONCE dataset annotation files into system sensor objects.
@@ -44,7 +44,7 @@ import java.util.Random;
 public class ONCEDatasetLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(ONCEDatasetLoader.class);
-    private static final Random random = new Random(42);
+    private static final RandomGenerator random = new java.util.SplittableRandom(42);
 
     private final SecurityValidator securityValidator;
 
@@ -71,7 +71,7 @@ public class ONCEDatasetLoader {
                                               String sourceName) throws IOException {
         securityValidator.validateSensorId(sourceName.replace(".json", "").replace("/", "-"));
 
-        logger.info("Loading ONCE annotation from: {}", sourceName);
+        logger.info("Loading ONCE annotation from: {}", sanitizeForLog(sourceName));
 
         try (InputStreamReader reader = new InputStreamReader(
                 inputStream, StandardCharsets.UTF_8)) {
@@ -112,7 +112,9 @@ public class ONCEDatasetLoader {
                 sceneId, frameId, timestamp, lidarPoints, names, boxes);
 
             logger.info("Loaded scene {}: {} LiDAR points, {} annotated objects",
-                sceneId, lidarPoints, annotation.getAnnotationCount());
+                sanitizeForLog(sceneId),
+                sanitizeForLog(lidarPoints),
+                sanitizeForLog(annotation.getAnnotationCount()));
 
             return annotation;
         }
@@ -136,7 +138,8 @@ public class ONCEDatasetLoader {
     public LiDARSensorData buildLiDARSensor(ONCESceneAnnotation annotation) {
         int n = annotation.getLidarPoints();
         logger.info("Building LiDAR sensor with {} points for scene {}",
-            n, annotation.getSceneId());
+            sanitizeForLog(n),
+            sanitizeForLog(annotation.getSceneId()));
 
         float[] x = new float[n];
         float[] y = new float[n];
@@ -171,5 +174,19 @@ public class ONCEDatasetLoader {
                 "Required field '" + field + "' missing in: " + source);
         }
         return obj.get(field).getAsInt();
+    }
+
+    private String sanitizeForLog(String input) {
+        if (input == null) return "null";
+        return input.replaceAll("[\\r\\n\\t]", "_")
+                    .substring(0, Math.min(input.length(), 100));
+    }
+
+    private String sanitizeForLog(long value) {
+        return String.valueOf(value);
+    }
+
+    private String sanitizeForLog(int value) {
+        return String.valueOf(value);
     }
 }

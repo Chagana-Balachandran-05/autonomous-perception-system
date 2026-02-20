@@ -44,7 +44,7 @@ public class AutonomousPerceptionSystem {
             : new KalmanFilterFusion();
 
         logger.info("Selected algorithm: {} (highUncertainty={})",
-            algorithm.getName(), highUncertainty);
+            sanitizeForLog(algorithm.getName()), highUncertainty);
 
         // Single processor — algorithm injected, same call regardless of which algorithm runs
         SensorFusionProcessor processor = new SensorFusionProcessor(algorithm);
@@ -58,7 +58,14 @@ public class AutonomousPerceptionSystem {
 
         PerceptionResult result = new PerceptionResult(fusionResult, detected, elapsed);
         logger.info("Perception complete: {} objects detected in {}ms using {}",
-            result.getObjectCount(), result.getProcessingTimeMs(),
-            fusionResult.getAlgorithmUsed());
+            result.getObjectCount(),
+            result.getProcessingTimeMs(),
+            sanitizeForLog(fusionResult.getAlgorithmUsed()));
+    }
+
+    private static String sanitizeForLog(String input) {
+        if (input == null) return "null";
+        return input.replaceAll("[\\r\\n\\t]", "_")
+                .substring(0, Math.min(input.length(), 100));
     }
 }

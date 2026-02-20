@@ -15,7 +15,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.random.RandomGenerator;
 
 /**
  * Loads and parses ONCE dataset annotation files into system sensor objects.
@@ -44,7 +43,7 @@ import java.util.random.RandomGenerator;
 public class ONCEDatasetLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(ONCEDatasetLoader.class);
-    private static final RandomGenerator random = new java.util.SplittableRandom(42);
+    private static final java.util.SplittableRandom random = new java.util.SplittableRandom(42);
 
     private final SecurityValidator securityValidator;
 
